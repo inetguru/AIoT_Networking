@@ -9,8 +9,8 @@ AI Agent와 AIoT 시대의 **네트워킹 구조와 기술 변화의 방향**을
 
 | 폴더 | 주제 | 상태 |
 |---|---|---|
-| [`API_Intro/`](API_Intro) | API란 무엇일까? (Postman 실습) | 준비 중 |
-| [`HTTP_Intro/`](HTTP_Intro) | HTTP의 이해 (패킷 캡처 실습) | 준비 중 |
+| [`API_Intro/`](API_Intro) | API란 무엇일까? (Postman 실습) | **사용 가능** |
+| [`HTTP_Intro/`](HTTP_Intro) | HTTP의 이해 (패킷 캡처 실습) | **사용 가능** |
 | [`Web_Intro/`](Web_Intro) | HTTP와 Web Programming (Node.js/Express, AJAX, CORS) | **사용 가능** |
 | [`docker/`](docker) | 모든 실습이 공유하는 이미지 (Node.js + Express + Python3) | 사용 가능 |
 

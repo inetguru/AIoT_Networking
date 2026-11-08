@@ -1,0 +1,136 @@
+{
+  "info": {
+    "_postman_id": "d11e6ba2-9cb7-4d2e-9865-1721afe30430",
+    "name": "공공데이터-기상청-동네예보조회서비스",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "19929"
+  },
+  "item": [
+    {
+      "name": "초단기실황조회",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=YOUR_SERVICE_KEY&numOfRows=10&pageNo=1&base_date=20261103&base_time=1400&nx=55&ny=127&dataType=JSON",
+          "protocol": "https",
+          "host": [
+            "apis",
+            "data",
+            "go",
+            "kr"
+          ],
+          "path": [
+            "1360000",
+            "VilageFcstInfoService_2.0",
+            "getUltraSrtNcst"
+          ],
+          "query": [
+            {
+              "key": "serviceKey",
+              "value": "YOUR_SERVICE_KEY",
+              "description": "공공데이터포털에서 발급받은 인증키"
+            },
+            {
+              "key": "numOfRows",
+              "value": "10",
+              "description": "한 페이지당 표출 데이터 수"
+            },
+            {
+              "key": "pageNo",
+              "value": "1",
+              "description": "페이지 번"
+            },
+            {
+              "key": "base_date",
+              "value": "20261103",
+              "description": "발표일자"
+            },
+            {
+              "key": "base_time",
+              "value": "1400",
+              "description": "발표시"
+            },
+            {
+              "key": "nx",
+              "value": "55",
+              "description": "예보지점 X 좌표"
+            },
+            {
+              "key": "ny",
+              "value": "127",
+              "description": "예보지점 Y 좌표"
+            },
+            {
+              "key": "dataType",
+              "value": "JSON",
+              "description": "요청자료형식(XML/JSON)- Default: XML"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "초단기예보조회",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst?serviceKey=YOUR_SERVICE_KEY&numOfRows=1000&pageNo=1&base_date=20261103&base_time=0900&nx=55&ny=127",
+          "protocol": "https",
+          "host": [
+            "apis",
+            "data",
+            "go",
+            "kr"
+          ],
+          "path": [
+            "1360000",
+            "VilageFcstInfoService_2.0",
+            "getUltraSrtFcst"
+          ],
+          "query": [
+            {
+              "key": "serviceKey",
+              "value": "YOUR_SERVICE_KEY",
+              "description": "공공데이터포털에서 발급받은 인증키"
+            },
+            {
+              "key": "numOfRows",
+              "value": "1000",
+              "description": "한 페이지당 표출 데이터 수"
+            },
+            {
+              "key": "pageNo",
+              "value": "1",
+              "description": "페이지 수"
+            },
+            {
+              "key": "base_date",
+              "value": "20261103",
+              "description": "발표일자 YYYYMMDD"
+            },
+            {
+              "key": "base_time",
+              "value": "0900",
+              "description": "발표시각 HHMM"
+            },
+            {
+              "key": "nx",
+              "value": "55",
+              "description": "예보지점 X 좌표값"
+            },
+            {
+              "key": "ny",
+              "value": "127",
+              "description": "예보지점 Y 좌표값"
+            }
+          ]
+        },
+        "description": "초단기예보정보를 조회하기 위해 발표일자, 발표시각, 예보지점 X 좌표, 예보지점 Y 좌표의 조회 조건으로 자료구분코드, 예보값, 발표일자, 발표시각, 예보지점 X 좌표, 예보지점 Y 좌표의 정보를 조회하는 기능"
+      },
+      "response": []
+    }
+  ]
+}
