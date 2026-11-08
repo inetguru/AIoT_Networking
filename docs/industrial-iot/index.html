@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제조 현장의 디바이스와 네트워킹 – OPC UA를 이해하기 위한 배경</title>
+<meta name="description" content="PLC, 필드버스, OPC UA, 엣지 게이트웨이까지: 스마트 팩토리의 장치와 통신을 비전공자 눈높이로 설명하는 보조 문서">
+<style>
+:root{
+  --navy:#1f497d; --teal:#1b9aaa; --orange:#f08a24; --green:#4f7a28;
+  --bg:#ffffff; --text:#22262b; --muted:#5d6670; --line:#d9dee4; --soft:#f3f6fa;
+  --tip:#e8f3ec; --tipb:#4f8a5b; --warn:#fff3e0; --warnb:#e08a1e; --info:#e8f0fe; --infob:#3b6ec7;
+  --code:#f1f3f5; --svgbg:#fbfcfe;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#14181d; --text:#e6e9ed; --muted:#9aa4af; --line:#2c333b; --soft:#1b2128;
+         --tip:#183222; --warn:#33260f; --info:#17233b; --code:#1e252c; --svgbg:#171c22; --navy:#8fb4e6; }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;line-height:1.75;font-size:17px}
+a{color:var(--infob)}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px;border-right:1px solid var(--line);font-size:14.5px}
+nav.toc h2{font-size:14px;color:var(--muted);margin:0 0 10px;letter-spacing:.04em}
+nav.toc a{display:block;padding:4px 8px;border-radius:6px;color:var(--text);text-decoration:none;line-height:1.4}
+nav.toc a:hover{background:var(--soft)}
+nav.toc a.sub{padding-left:22px;color:var(--muted);font-size:13.5px}
+main{padding:28px clamp(18px,4vw,56px) 80px;min-width:0}
+header.hero h1{font-size:clamp(26px,4vw,38px);line-height:1.3;margin:6px 0 10px;color:var(--navy)}
+header.hero p.lead{font-size:18px;color:var(--muted);margin:0 0 18px}
+.badges span{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:2px 12px;margin:0 6px 6px 0;font-size:13.5px;color:var(--muted)}
+h2{font-size:27px;margin:56px 0 10px;padding-top:10px;border-top:3px solid var(--navy);color:var(--navy)}
+h3{font-size:21px;margin:30px 0 6px}
+h4{font-size:17.5px;margin:22px 0 4px}
+p{margin:10px 0}
+ul,ol{padding-left:22px} li{margin:4px 0}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-family:Consolas,"D2Coding",monospace;font-size:.92em}
+pre{background:var(--code);padding:14px 16px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.55}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:15.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+th{background:var(--soft)}
+.tablewrap{overflow-x:auto}
+figure{margin:20px 0}
+figure img,figure svg{width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:var(--svgbg)}
+figcaption{font-size:14.5px;color:var(--muted);margin-top:6px}
+figure.ai figcaption::before{content:"🖼 AI 생성 일러스트 · ";}
+.box{border-left:5px solid var(--infob);background:var(--info);padding:10px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.box.tip{border-color:var(--tipb);background:var(--tip)}
+.box.warn{border-color:var(--warnb);background:var(--warn)}
+.box .t{font-weight:700;display:block;margin-bottom:2px}
+.box p{margin:6px 0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--soft)}
+.card h4{margin:0 0 4px}
+details{border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:8px 0;background:var(--soft)}
+summary{cursor:pointer;font-weight:600}
+svg text{fill:currentColor;font-family:inherit}
+.small{font-size:14px;color:var(--muted)}
+footer{margin-top:60px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (max-width:900px){ .layout{grid-template-columns:1fr} nav.toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)} }
+@media print{ nav.toc{display:none} .layout{display:block} details{break-inside:avoid} body{font-size:14px} h2{break-before:page} }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="목차">
+  <h2>목차</h2>
+  <a href="#intro">0. 이 문서는</a>
+  <a href="#overview">1. 한눈에 보기</a>
+  <a href="#itot">2. IT와 OT, 두 세계</a>
+  <a href="#devices">3. 공장에는 어떤 장치가 있을까</a>
+  <a href="#plc">4. PLC – 공장의 심장</a>
+  <a class="sub" href="#plc-vs-pc">PC와 무엇이 다른가</a>
+  <a class="sub" href="#scan">스캔 사이클과 결정론</a>
+  <a class="sub" href="#hw">하드웨어와 OS</a>
+  <a href="#edge-ai">5. 엣지 AI와 실시간성</a>
+  <a href="#fieldbus">6. 현장의 통신(필드버스)</a>
+  <a href="#opcua">7. OPC UA</a>
+  <a class="sub" href="#opcua-stack">구조</a>
+  <a class="sub" href="#opcua-space">주소 공간</a>
+  <a class="sub" href="#opcua-modes">Client-Server와 Pub/Sub</a>
+  <a class="sub" href="#opcua-vs">MQTT, REST와의 관계</a>
+  <a href="#integrate">8. 레거시를 OPC UA로</a>
+  <a href="#cautions">9. 현장에서 꼭 기억할 것</a>
+  <a href="#lab">10. 실습과 연결하기</a>
+  <a href="#glossary">11. 용어 사전</a>
+  <a href="#check">12. 스스로 점검</a>
+</nav>
+
+<main>
+<header class="hero" id="top">
+  <div class="badges"><span>보조 자료</span><span>AIoT 네트워킹</span><span>주제 5 · OPC UA</span></div>
+  <h1>제조 현장의 디바이스와 네트워킹</h1>
+  <p class="lead">PLC에서 OPC UA까지 — 공장 안의 장치들이 어떻게 말을 주고받는지, 그리고 왜 OPC UA가 필요한지를 이해하기 위한 배경 지식</p>
+</header>
+
+<section id="intro">
+  <h2 style="margin-top:24px">0. 이 문서는</h2>
+  <p>수업의 <b>OPC UA</b> 실습(<code>Net2_Intro</code>)을 해 보면 서버가 <code>Factory / Line1 / Temp01 / Temperature</code> 라는 트리를 보여 주고, 클라이언트가 그것을 탐색하고 읽고 구독합니다. 그런데 "<i>왜 굳이 이런 구조가 필요하지? 실제 공장에서는 어떤 장치가 어떻게 연결되어 있지?</i>"라는 질문이 남습니다. 이 문서는 그 질문에 답하기 위한 <b>배경 지식</b>을 정리했습니다.</p>
+  <div class="cols">
+    <div class="card"><h4>누구를 위한 문서인가</h4>공장 현장 경험이 많지 않거나 컴퓨터공학이 전공이 아닌 학생. 용어는 처음 나올 때 쉬운 말로 풀었습니다.</div>
+    <div class="card"><h4>어떻게 읽으면 좋은가</h4>수업 전에 <b>1~3절</b>로 큰 그림을 보고, 수업 후에 궁금한 절을 골라 읽으세요. 모르는 용어는 <a href="#glossary">용어 사전</a>에 있습니다.</div>
+    <div class="card"><h4>이 문서의 한계</h4>개념과 구조를 이해하기 위한 자료입니다. 제품·규격의 세부 사양은 제조사 문서와 표준을 확인하세요.</div>
+  </div>
+</section>
+
+<section id="overview">
+  <h2>1. 한눈에 보기</h2>
+  <p>현대의 공장은 <b>오래된 설비</b>(수십 년 쓴 PLC와 계측기), <b>이동 로봇</b>(AMR), 그리고 <b>AI 장비</b>가 한 공간에 섞여 있습니다. 이들은 서로 다른 회사가 서로 다른 방식으로 만들었기 때문에, 말(통신 규약)이 제각각입니다. 이 <b>파편화</b>가 스마트 팩토리의 가장 큰 걸림돌이고, OPC UA는 이를 해결하려는 "공통 언어"입니다.</p>
+  <figure>
+    <img src="img/smart_factory_architecture.jpg" alt="스마트 팩토리 네트워크 아키텍처: 상위 시스템(Cloud AI, MES, ERP, WMS, SCADA), OPC UA, 레거시 제조 라인(PLC, 인버터, 센서)과 이동 로봇(AMR)">
+    <figcaption>스마트 팩토리 참조 구조. 위쪽은 기업·클라우드 시스템, 가운데는 OPC UA, 아래는 오래된 설비(Modbus)와 이동 로봇(ROS 2, CAN)이다. 이 문서의 전체 이야기를 한 장에 담았다. (AI가 생성한 이미지)</figcaption>
+  </figure>
+  <div class="box tip"><span class="t">이 문서의 핵심 세 가지</span>
+    <ol>
+      <li><b>PLC는 공장의 심장</b>이다. 일반 컴퓨터와 달리 <b>정해진 주기를 반드시 지키는 것</b>이 존재 이유이다.</li>
+      <li>현장의 통신은 <b>제조사마다 다르고, 값만 전달할 뿐 의미(단위, 이름)를 담지 않는</b> 경우가 많다.</li>
+      <li><b>OPC UA</b>는 장비의 데이터를 <b>의미와 함께, 안전하게</b> 주고받는 공통 언어다. 오래된 설비는 <b>게이트웨이</b>로 감싸 연결한다.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="itot">
+  <h2>2. IT와 OT, 두 세계</h2>
+  <p>같은 "컴퓨터와 네트워크"라도 사무실(IT)과 공장(OT)은 <b>무엇을 가장 소중히 여기는가</b>가 다릅니다.</p>
+  <figure class="ai"><img src="img/02_it_vs_ot.jpg" alt="IT 세계와 OT 세계를 게이트웨이 다리로 잇는 일러스트" onerror="this.closest('figure').remove()"><figcaption>IT(사무실, 서버, 클라우드)와 OT(설비, 제어기, 안전)를 잇는 다리가 게이트웨이다.</figcaption></figure>
+  <div class="tablewrap"><table>
+    <tr><th></th><th>IT (Information Technology)</th><th>OT (Operational Technology)</th></tr>
+    <tr><th>대상</th><td>사무·업무 시스템, 서버, 클라우드</td><td>설비, 센서, 제어기, 로봇 — <b>물리적인 것을 움직이는</b> 시스템</td></tr>
+    <tr><th>가장 중요한 것</th><td>데이터의 이동성, 확장성, <b>보안</b></td><td><b>안전</b>, 신뢰성, <b>정해진 시간 안에 반응</b>(실시간성)</td></tr>
+    <tr><th>고장이 나면</th><td>서비스가 느려지거나 멈춘다 (재시작하면 된다)</td><td>설비 손상, 불량, <b>인명 사고</b>까지 이어질 수 있다</td></tr>
+    <tr><th>수명</th><td>수 년 단위로 교체</td><td>수십 년 쓰는 설비도 흔하다</td></tr>
+    <tr><th>네트워크</th><td>인터넷에 연결되어 있다</td><td>전통적으로 <b>외부와 단절된 폐쇄망</b></td></tr>
+  </table></div>
+  <p>인더스트리 4.0 이후에는 설비 데이터를 클라우드로 모아 <b>고장 예측(예지보전, PdM)</b>을 하고, 주문이 바뀌면 라인을 유연하게 바꿔야 합니다. 그러면 두 세계가 <b>만나야</b> 하는데(IT/OT 융합), 이때 세 가지 문제가 생깁니다.</p>
+  <ul>
+    <li><b>프로토콜의 폐쇄성</b> — 제조사 고유의 방식(예: Siemens S7, Rockwell CIP, Mitsubishi MC Protocol)에 묶여, 다른 회사 장비와 붙이기 어렵다 (<i>벤더 락인, Vendor Lock-in</i>).</li>
+    <li><b>의미(Semantics)의 부재</b> — 숫자만 오가고 "무엇의, 어떤 단위인지"가 빠져 있다. IT 시스템이 쓰려면 사람이 일일이 해석해 줘야 한다.</li>
+    <li><b>보안 취약점</b> — 폐쇄망을 전제로 설계된 옛 통신이 상위 네트워크에 열리면 해킹에 노출된다.</li>
+  </ul>
+</section>
+
+<section id="devices">
+  <h2>3. 공장에는 어떤 장치가 있을까</h2>
+  <figure class="ai"><img src="img/01_factory_floor.jpg" alt="컨베이어, 로봇 팔, 센서, 제어반, 조작 패널, 엣지 게이트웨이가 있는 스마트 팩토리 단면 일러스트" onerror="this.closest('figure').remove()"><figcaption>공장 한 라인의 구성: 센서가 읽고, 제어기가 판단하고, 액추에이터(모터·로봇)가 움직인다.</figcaption></figure>
+  <p>공장의 장치는 <b>"느끼고 → 판단하고 → 움직이고 → 보고한다"</b>는 흐름으로 이해하면 쉽습니다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>역할</th><th>장치</th><th>쉬운 설명</th></tr>
+    <tr><th>느낀다</th><td><b>센서</b> (온도, 압력, 근접, 광전 센서 등)</td><td>사람의 눈·피부. 물리량을 전기 신호(24V 온/오프, 4~20mA 아날로그)로 바꾼다</td></tr>
+    <tr><th>판단한다</th><td><b>PLC / PAC</b></td><td>설비의 두뇌. 센서 신호를 보고 "모터를 돌려라" 같은 결정을 정해진 주기로 반복한다</td></tr>
+    <tr><th>움직인다</th><td><b>액추에이터</b> (모터, 인버터·서보 드라이브, 솔레노이드 밸브, 릴레이)</td><td>사람의 근육. 제어기의 명령을 실제 힘·동작으로 바꾼다</td></tr>
+    <tr><th>보여 준다</th><td><b>HMI</b> (Human-Machine Interface)</td><td>설비 옆의 터치 패널. 작업자가 상태를 보고 명령을 준다</td></tr>
+    <tr><th>모아서 감시한다</th><td><b>SCADA</b></td><td>여러 설비를 한꺼번에 모니터링·제어하는 관제 시스템</td></tr>
+    <tr><th>생산을 관리한다</th><td><b>MES</b> (Manufacturing Execution System)</td><td>"오늘 무엇을 몇 개 만들었나, 불량은?" 같은 현장 생산 실행 관리</td></tr>
+    <tr><th>회사를 운영한다</th><td><b>ERP · WMS</b>, <b>Cloud AI</b></td><td>주문·재고·회계 같은 기업 전체 관리, 창고 관리, 대규모 데이터 분석</td></tr>
+  </table></div>
+  <h3 id="pyramid">자동화 피라미드 – 아래는 현장, 위는 회사</h3>
+  <p>이 장치들은 층을 이루어 연결됩니다. 아래층일수록 <b>빠르고 물리적</b>이며(밀리초 단위의 제어), 위층일수록 <b>느리고 업무적</b>입니다(분·시간 단위의 생산·경영 관리). 층마다 주로 쓰는 통신 방식도 다릅니다.</p>
+  <figure>
+    <svg viewBox="0 0 900 470" role="img" aria-label="자동화 피라미드: 현장, 제어, 감시, 생산 운영, 기업 5개 층과 각 층의 장치·통신 방식">
+      <g font-size="15">
+        <text x="20" y="22" font-size="13" opacity=".7">층</text><text x="305" y="22" font-size="13" opacity=".7">장치</text><text x="590" y="22" font-size="13" opacity=".7">주로 쓰는 통신</text>
+        <!-- 5 rows -->
+        <g transform="translate(0,32)">
+          <rect x="300" y="0" width="260" height="76" rx="8" fill="#1b9aaa" opacity=".9"/>
+          <text x="20" y="42" font-weight="700">5. 기업 · 클라우드</text>
+          <text x="430" y="36" text-anchor="middle" fill="#fff" font-weight="700">ERP · WMS · Cloud AI</text>
+          <text x="590" y="36">REST API · MQTT</text><text x="590" y="58" font-size="13" opacity=".7">(IT 쪽의 웹 표준)</text>
+        </g>
+        <g transform="translate(0,118)">
+          <rect x="260" y="0" width="340" height="76" rx="8" fill="#2a86a8" opacity=".92"/>
+          <text x="20" y="42" font-weight="700">4. 생산 운영</text>
+          <text x="430" y="36" text-anchor="middle" fill="#fff" font-weight="700">MES</text>
+          <text x="590" y="36" dx="20">OPC UA · REST · MQTT</text>
+        </g>
+        <g transform="translate(0,204)">
+          <rect x="215" y="0" width="430" height="76" rx="8" fill="#3b6fa5"/>
+          <text x="20" y="42" font-weight="700">3. 감시 · 제어실</text>
+          <text x="430" y="36" text-anchor="middle" fill="#fff" font-weight="700">SCADA · HMI</text>
+          <text x="665" y="36">OPC UA</text>
+        </g>
+        <g transform="translate(0,290)">
+          <rect x="170" y="0" width="520" height="76" rx="8" fill="#d9772b"/>
+          <text x="20" y="42" font-weight="700">2. 제어</text>
+          <text x="430" y="30" text-anchor="middle" fill="#fff" font-weight="700">PLC · PAC · 로봇/드라이브 제어기</text>
+          <text x="430" y="54" text-anchor="middle" fill="#fff" font-size="13">(설비의 두뇌)</text>
+          <text x="710" y="30">필드버스: Modbus,</text><text x="710" y="52">CANopen, Profinet,</text><text x="710" y="72" font-size="14">EtherCAT, EtherNet/IP</text>
+        </g>
+        <g transform="translate(0,376)">
+          <rect x="125" y="0" width="610" height="76" rx="8" fill="#b35f1e"/>
+          <text x="20" y="42" font-weight="700">1. 현장 (Field)</text>
+          <text x="430" y="30" text-anchor="middle" fill="#fff" font-weight="700">센서 · 액추에이터 (모터, 밸브, 릴레이)</text>
+          <text x="430" y="54" text-anchor="middle" fill="#fff" font-size="13">물리 세계와 닿는 층</text>
+          <text x="755" y="30">24V 온/오프 신호,</text><text x="755" y="52">4~20mA 아날로그</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>자동화 피라미드(일반 개념). 아래에서 위로 갈수록 시간 단위가 커지고 IT에 가까워진다. 실제 구성은 공장마다 다르다.</figcaption>
+  </figure>
+  <div class="box"><span class="t">💡 이 피라미드가 수업과 닿는 곳</span>
+    수업에서 다루는 <b>OPC UA</b>는 2~4층을 잇고, <b>MQTT</b>와 <b>REST API</b>는 4~5층(클라우드·웹)과 닿으며, <b>Modbus·CANopen</b>은 1~2층의 이야기입니다.</div>
+</section>
+
+<section id="plc">
+  <h2>4. PLC – 공장의 심장</h2>
+  <figure class="ai"><img src="img/03_plc_cabinet.jpg" alt="DIN 레일에 장착된 모듈형 PLC와 센서·모터·밸브 배선 일러스트" onerror="this.closest('figure').remove()"><figcaption>제어반 안의 PLC. CPU 모듈과 입출력(I/O) 모듈이 센서·모터·밸브와 전선으로 직접 연결된다.</figcaption></figure>
+  <h3 id="plc-vs-pc">PLC와 PC는 무엇이 다른가</h3>
+  <p><b>PLC</b>(Programmable Logic Controller)는 생김새는 컴퓨터와 비슷하지만 <b>존재 목적이 다릅니다</b>. 옛날에는 릴레이와 전선으로 만들던 "버튼을 누르면 모터가 돈다" 같은 <b>논리 제어</b>를 프로그램으로 대체한 장치입니다. 여기에 모션 제어, 비전, IT 통신까지 통합한 상급 장치를 <b>PAC</b>(Programmable Automation Controller)라고 부릅니다.</p>
+  <div class="tablewrap"><table>
+    <tr><th></th><th>일반 PC</th><th>PLC</th><th>PAC</th></tr>
+    <tr><th>설계 목적</th><td>사무, 웹, 멀티미디어, 대용량 계산</td><td>설비의 순서·논리(온/오프) 제어</td><td>순서 제어 + 다축 모션 + 비전 + IT 통신 통합</td></tr>
+    <tr><th>운영체제</th><td>Windows, macOS, 데스크톱 Linux</td><td>제조사 고유 펌웨어 또는 가벼운 RTOS</td><td>고성능 멀티코어 RTOS, 하이퍼바이저</td></tr>
+    <tr><th>일하는 방식</th><td><b>비결정적</b> — 여러 작업을 시분할로 처리해 반응 시간이 들쭉날쭉</td><td><b>결정적</b> — 고정 주기(스캔 타임)를 보장</td><td>결정적 멀티태스크 + 통신 작업 분리</td></tr>
+    <tr><th>입출력</th><td>USB, PCIe, HDMI 등 IT 규격</td><td>24V 디지털, 4~20mA 아날로그를 <b>직접</b> 연결</td><td>초고속 버스 I/O, 모션 축, 광역 네트워크</td></tr>
+    <tr><th>환경</th><td>통제된 실내(먼지·충격에 약함)</td><td>가혹한 공장 환경(노이즈·먼지·진동 견딤, 팬 없음)</td><td>산업용 모듈 규격(내진동, 넓은 온도 범위)</td></tr>
+    <tr><th>프로그래밍</th><td>C++, Python, Java 등</td><td><b>IEC 61131-3</b> (래더 로직, 펑션 블록 등)</td><td>IEC 61131-3(ST) + C/C++</td></tr>
+  </table></div>
+
+  <h3 id="scan">핵심은 "주기 보장" – 스캔 사이클과 결정론</h3>
+  <p>PLC는 전원이 켜져 있는 동안 <b>같은 세 단계를 정해진 주기로 끝없이 반복</b>합니다. 이 주기를 <b>스캔 타임</b>이라고 합니다.</p>
+  <figure>
+    <svg viewBox="0 0 900 250" role="img" aria-label="PLC 스캔 사이클: 입력 스캔, 프로그램 실행, 출력 스캔을 고정 주기로 반복">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+      <g font-size="15" text-anchor="middle">
+        <rect x="10" y="60" width="120" height="70" rx="10" fill="#e9eef5" stroke="#8aa0bd"/><text x="70" y="90">센서 ·</text><text x="70" y="112">스위치</text>
+        <rect x="190" y="50" width="150" height="90" rx="12" fill="#1b9aaa"/><text x="265" y="85" fill="#fff" font-weight="700">① 입력 스캔</text><text x="265" y="110" fill="#fff" font-size="13">입력 상태를 한꺼번에</text><text x="265" y="127" fill="#fff" font-size="13">메모리에 기록</text>
+        <rect x="380" y="50" width="150" height="90" rx="12" fill="#3b6fa5"/><text x="455" y="85" fill="#fff" font-weight="700">② 프로그램 실행</text><text x="455" y="110" fill="#fff" font-size="13">래더/ST 로직을</text><text x="455" y="127" fill="#fff" font-size="13">처음부터 끝까지 계산</text>
+        <rect x="570" y="50" width="150" height="90" rx="12" fill="#d9772b"/><text x="645" y="85" fill="#fff" font-weight="700">③ 출력 스캔</text><text x="645" y="110" fill="#fff" font-size="13">결과를 출력 단자로</text><text x="645" y="127" fill="#fff" font-size="13">한꺼번에 내보냄</text>
+        <rect x="770" y="60" width="120" height="70" rx="10" fill="#e9eef5" stroke="#8aa0bd"/><text x="830" y="90">모터 · 밸브</text><text x="830" y="112">· 릴레이</text>
+      </g>
+      <g stroke="currentColor" stroke-width="2.2" fill="none" marker-end="url(#ar)">
+        <line x1="132" y1="95" x2="186" y2="95"/><line x1="342" y1="95" x2="376" y2="95"/><line x1="532" y1="95" x2="566" y2="95"/><line x1="722" y1="95" x2="766" y2="95"/>
+      </g>
+      <path d="M645 145 C645 215 265 215 265 148" stroke="currentColor" stroke-width="2.2" fill="none" stroke-dasharray="6 5" marker-end="url(#ar)"/>
+      <text x="455" y="230" font-size="15" text-anchor="middle" font-weight="700">고정 주기로 계속 반복 (예: 1 ms)</text>
+    </svg>
+    <figcaption>PLC의 스캔 사이클. 입력을 한 번에 읽고, 계산하고, 출력을 한 번에 내보내는 일을 정해진 주기로 반복한다.</figcaption>
+  </figure>
+  <p><b>결정론(Determinism)</b>이란 "<i>같은 일이 항상 같은 시간 안에 끝난다</i>"는 성질입니다. 컨베이어 위의 제품을 정확한 순간에 밀어내야 하는 설비에서는 평균이 빠른 것보다 <b>한 번도 늦지 않는 것</b>이 중요합니다. 일반 PC는 백그라운드 작업과 운영체제의 스케줄링 때문에 반응 시간이 들쭉날쭉(<b>지터, Jitter</b>)한데, PLC는 이를 아주 작은 오차 안으로 막습니다.</p>
+  <figure>
+    <svg viewBox="0 0 900 200" role="img" aria-label="PLC는 일정 간격으로, PC는 들쭉날쭉한 간격으로 작업이 실행되는 모습을 비교한 타임라인">
+      <g font-size="15">
+        <text x="10" y="55" font-weight="700">PLC</text>
+        <line x1="90" y1="50" x2="880" y2="50" stroke="currentColor" opacity=".35"/>
+        <g fill="#1b9aaa"><circle cx="110" cy="50" r="9"/><circle cx="230" cy="50" r="9"/><circle cx="350" cy="50" r="9"/><circle cx="470" cy="50" r="9"/><circle cx="590" cy="50" r="9"/><circle cx="710" cy="50" r="9"/><circle cx="830" cy="50" r="9"/></g>
+        <text x="90" y="85" font-size="14" opacity=".8">간격이 항상 같다 → 언제 반응할지 정확히 예측할 수 있다</text>
+        <text x="10" y="150" font-weight="700">일반 PC</text>
+        <line x1="90" y1="145" x2="880" y2="145" stroke="currentColor" opacity=".35"/>
+        <g fill="#d9772b"><circle cx="110" cy="145" r="9"/><circle cx="200" cy="145" r="9"/><circle cx="360" cy="145" r="9"/><circle cx="420" cy="145" r="9"/><circle cx="600" cy="145" r="9"/><circle cx="650" cy="145" r="9"/><circle cx="840" cy="145" r="9"/></g>
+        <text x="90" y="180" font-size="14" opacity=".8">간격이 들쭉날쭉(지터) → 가끔 크게 늦는다</text>
+      </g>
+    </svg>
+    <figcaption>같은 작업을 반복 실행했을 때의 시각을 점으로 나타낸 개념도. PLC는 규칙적이고 PC는 불규칙하다.</figcaption>
+  </figure>
+  <div class="box tip"><span class="t">🏭 현장에서는</span>스캔 타임은 장비와 프로그램에 따라 다르지만, 빠른 제어에서는 수 밀리초 이내(예: 1 ms)를 요구하기도 합니다. 그래서 PLC에 <b>무거운 AI 계산을 같이 얹지 않는 것</b>이 원칙입니다 → 5절.</div>
+
+  <h3 id="hw">PLC 안쪽 – 하드웨어와 운영체제 (알아 두면 좋은 내용)</h3>
+  <div class="cols">
+    <div class="card"><h4>프로세서</h4><ul>
+      <li><b>ARM Cortex-A / Cortex-R</b>: 전력 대비 성능이 좋아 중소형 PAC·게이트웨이에 많이 쓴다. A는 리눅스·통신을, R은 정해진 시간의 I/O 제어를 맡는 식으로 나눠 쓴다</li>
+      <li><b>x86 (Intel, AMD)</b>: 고속 모션이나 머신 비전처럼 계산이 큰 PAC·산업용 PC(IPC)</li>
+      <li><b>FPGA / ASIC</b>: 통신 프레임(Profinet IRT, EtherCAT)을 CPU를 거치지 않고 하드웨어로 빠르게 처리</li></ul></div>
+    <div class="card"><h4>실시간 운영체제(RTOS)</h4><ul>
+      <li><b>VxWorks, QNX</b>: 항공·방산·로봇 제어기에 쓰이는 상용 RTOS</li>
+      <li><b>PREEMPT_RT Linux</b>: 일반 리눅스를 "실시간으로 선점 가능하게" 고친 오픈소스 커널. 최신 개방형 컨트롤러에서 쓰인다</li>
+      <li><b>TwinCAT(Beckhoff)</b>: 윈도 PC의 CPU 코어 일부를 운영체제에서 떼어 내 제어 전용으로 쓰는 소프트웨어 PLC 방식</li></ul></div>
+    <div class="card"><h4>대표 제조사 (예시)</h4><ul>
+      <li><b>Siemens</b>: SIMATIC S7-1200/1500, 엔지니어링 툴 TIA Portal, 통신 Profinet</li>
+      <li><b>Rockwell Automation</b>(Allen-Bradley): ControlLogix/CompactLogix, Studio 5000, EtherNet/IP(CIP)</li>
+      <li><b>Mitsubishi Electric</b>: MELSEC iQ-R/iQ-F, 서보 MELSERVO, CC-Link IE TSN</li></ul></div>
+  </div>
+  <p class="small">각 제조사는 자기 방식의 통신과 프로그래밍 도구를 갖고 있습니다. 이것이 "제조사마다 말이 다르다"는 문제의 출발점입니다. (제품명은 이해를 돕는 예시이며 추천이 아닙니다.)</p>
+</section>
+
+<section id="edge-ai">
+  <h2>5. 엣지 AI와 실시간성 – 왜 AI를 PLC와 분리할까</h2>
+  <p>머신 비전 검사, 진동 분석을 통한 고장 예측, 로봇의 장애물 인식에 딥러닝이 필요해지면서 현장에 <b>GPU·NPU가 달린 장치</b>(엣지 AI)가 들어옵니다. 그런데 이것을 PLC와 한 몸으로 만들면 문제가 생깁니다.</p>
+  <figure class="ai"><img src="img/06_edge_ai_separation.jpg" alt="실시간 제어용 PLC와 GPU가 있는 엣지 AI 박스가 케이블로 연결된 일러스트" onerror="this.closest('figure').remove()"><figcaption>"제어"와 "AI 계산"은 서로 다른 박스에서 한다.</figcaption></figure>
+  <h3>GPU 계산이 실시간 제어에 해로운 이유</h3>
+  <ol>
+    <li><b>평균은 빠르지만 편차가 크다</b> — GPU는 많은 데이터를 한꺼번에 처리하는 데 강하지만, 어떤 프레임은 오래 걸리는 식으로 시간이 불규칙(지터)하다.</li>
+    <li><b>버스를 나눠 쓴다</b> — 큰 이미지를 메모리로 옮기는 전송이 제어 작업의 메모리 접근을 막을 수 있다.</li>
+    <li><b>즉시 끼어들기(선점)가 어렵다</b> — 범용 GPU 계산은 "급한 일 먼저"로 끊고 바꾸는 기능이 약하다.</li>
+  </ol>
+  <h3>현장의 해법: 제어 도메인과 AI 도메인을 분리</h3>
+  <figure>
+    <svg viewBox="0 0 900 330" role="img" aria-label="물리적 분리 구성과 하이퍼바이저 코어 격리 구성">
+      <g font-size="14.5" text-anchor="middle">
+        <text x="225" y="22" font-weight="700" font-size="16">① 물리적 분리 (가장 안정적)</text>
+        <rect x="20" y="42" width="170" height="130" rx="10" fill="#d9772b"/><text x="105" y="76" fill="#fff" font-weight="700">PLC / PAC</text><text x="105" y="100" fill="#fff" font-size="13">(RTOS)</text><text x="105" y="124" fill="#fff" font-size="13">고정 주기 모터 제어</text><text x="105" y="144" fill="#fff" font-size="13">비상 정지·안전 인터록</text>
+        <rect x="260" y="42" width="170" height="130" rx="10" fill="#1b9aaa"/><text x="345" y="76" fill="#fff" font-weight="700">Edge AI 박스</text><text x="345" y="100" fill="#fff" font-size="13">(GPU, Linux)</text><text x="345" y="124" fill="#fff" font-size="13">딥러닝 비전 검사</text>
+        <line x1="192" y1="107" x2="258" y2="107" stroke="currentColor" stroke-width="2.4"/>
+        <text x="225" y="200" font-size="13">EtherCAT / Profinet 등으로</text><text x="225" y="218" font-size="13">"불량 판정, 좌표"만 주고받는다</text>
+        <text x="675" y="22" font-weight="700" font-size="16">② 하이퍼바이저로 코어 격리</text>
+        <rect x="475" y="42" width="400" height="215" rx="10" fill="none" stroke="currentColor" opacity=".5"/>
+        <rect x="490" y="56" width="180" height="120" rx="8" fill="#d9772b"/><text x="580" y="86" fill="#fff" font-weight="700">Core 0, 1</text><text x="580" y="108" fill="#fff" font-size="13">하드 실시간 도메인</text><text x="580" y="128" fill="#fff" font-size="13">RTOS</text><text x="580" y="148" fill="#fff" font-size="13">시퀀스·모션 제어</text>
+        <rect x="685" y="56" width="180" height="120" rx="8" fill="#1b9aaa"/><text x="775" y="86" fill="#fff" font-weight="700">Core 2, 3</text><text x="775" y="108" fill="#fff" font-size="13">비실시간 AI 도메인</text><text x="775" y="128" fill="#fff" font-size="13">Linux + GPU</text><text x="775" y="148" fill="#fff" font-size="13">AI 추론</text>
+        <rect x="490" y="190" width="375" height="52" rx="8" fill="#3b6fa5"/><text x="677" y="222" fill="#fff" font-weight="700">산업용 하이퍼바이저 (Type-1)</text>
+        <text x="675" y="285" font-size="13">한 장비 안에서 코어를 나누어 서로 간섭하지 않게 한다</text>
+      </g>
+    </svg>
+    <figcaption>왼쪽은 장비를 나누는 방식, 오른쪽은 한 장비 안에서 CPU 코어를 나누는 방식. 두 경우 모두 <b>제어는 AI의 영향을 받지 않는다</b>.</figcaption>
+  </figure>
+  <div class="box"><span class="t">📌 정리</span>AI는 <b>"판단 결과(예: 불량 판정, 좌표)"를 PLC에 알려 주는 조언자</b>일 뿐, 모터를 직접 돌리는 제어 루프를 쥐지 않습니다. 이 구분은 뒤의 "기능 안전"(9절)과도 같은 생각입니다.</div>
+</section>
+
+<section id="fieldbus">
+  <h2>6. 현장의 통신 – 필드버스</h2>
+  <p><b>필드버스</b>(Fieldbus)는 센서·드라이브·제어기를 잇는 현장 통신입니다. 인터넷의 HTTP처럼 "웹 문서"를 주고받는 것이 아니라, <b>정해진 주기에 작은 값을 정확히 주고받는 것</b>이 목적입니다. 수업과 관련해 세 가지를 소개합니다.</p>
+
+  <h3>Modbus – 가장 단순하고 오래된 방식</h3>
+  <ul>
+    <li><b>1979년 Modicon</b>이 만든 마스터-슬레이브(요청-응답) 방식. 구조가 단순해서 지금도 매우 널리 쓰인다.</li>
+    <li>종류: 시리얼 배선의 <b>Modbus RTU</b>(RS-485/232)와, 이더넷 위의 <b>Modbus/TCP</b>(포트 502).</li>
+    <li>데이터는 <b>코일(Coil, 1비트)</b>과 <b>16비트 레지스터</b>의 <b>번호</b>(예: 40001)로만 표현된다.</li>
+  </ul>
+  <div class="box warn"><span class="t">⚠ Modbus의 한계</span>
+    <ul><li><b>의미가 없다</b> — "40001번 레지스터 = 4000"일 뿐, 그것이 <b>유압 압력인지, 단위가 bar인지, 값에 0.1을 곱해야 하는지</b>는 어디에도 적혀 있지 않다. 그래서 <b>주소 맵 매뉴얼</b>이 반드시 필요하다.</li>
+    <li><b>인증·암호화가 없다</b> — 같은 네트워크에 들어오면 누구나 읽고 쓰고, 값을 엿볼 수 있다.</li></ul></div>
+
+  <h3>CAN / CANopen – 로봇과 모터 안쪽의 통신</h3>
+  <ul>
+    <li>자동차와 로봇 내부에서 쓰는 <b>2선식 버스</b>. 여러 장치가 동시에 말하려 하면 <b>우선순위 높은 메시지가 먼저</b> 가도록 정리(중재)해서 신뢰성이 높다.</li>
+    <li><b>CANopen</b>은 CAN 위에 "무엇을 어떻게 주고받을지"를 표준화한 규격(CiA 301). 모터 드라이버용 프로파일(CiA 402)도 있다.</li>
+    <li><b>객체 사전(Object Dictionary)</b>: 장비의 모든 설정·값이 <code>인덱스:서브인덱스</code>의 표로 정리된다. 예) <code>0x6040</code>=모터 제어 워드, <code>0x6064</code>=현재 위치.</li>
+    <li>두 가지 주고받기: <b>PDO</b> — 빠른 실시간 값(확인 응답 없이 방송), <b>SDO</b> — 설정·파라미터(1:1로 확인하며 읽기/쓰기).</li>
+  </ul>
+
+  <h3>ROS 2 – 이동 로봇 내부의 분산 제어</h3>
+  <ul>
+    <li><b>AMR</b>(자율 이동 로봇)은 내부에 여러 <b>노드</b>(센서 드라이버, 경로 계획, 모터 브리지 …)가 따로 돌며 서로 메시지를 주고받는다. 이 구조를 제공하는 소프트웨어가 <b>ROS 2</b>이다.</li>
+    <li>ROS 2는 <b>DDS</b>(브로커 없는 Pub/Sub 미들웨어)를 통신 기반으로 쓴다. (수업의 DDS 설명 참고)</li>
+    <li>예: 상위 속도 명령을 받으면 <b>Motor Bridge 노드</b>가 이를 CANopen 메시지로 바꿔 바퀴 모터 드라이버에 보낸다.</li>
+  </ul>
+  <figure class="ai"><img src="img/05_amr_warehouse.jpg" alt="LiDAR 안전 스캐너가 달린 자율 이동 로봇이 창고에서 물건을 나르는 일러스트" onerror="this.closest('figure').remove()"><figcaption>AMR: 내부는 ROS 2와 CAN, 바깥(공장 시스템)과는 무선 네트워크로 연결된다.</figcaption></figure>
+
+  <div class="tablewrap"><table>
+    <tr><th></th><th>Modbus</th><th>CAN / CANopen</th><th>ROS 2 (DDS)</th></tr>
+    <tr><th>주로 쓰이는 곳</th><td>레거시 설비, 계측기, 인버터</td><td>모터·드라이브, 로봇·차량 내부</td><td>이동 로봇·로봇 시스템 내부</td></tr>
+    <tr><th>통신 방식</th><td>마스터가 묻고 슬레이브가 답함</td><td>방송 + 우선순위 중재</td><td>토픽 기반 Pub/Sub</td></tr>
+    <tr><th>데이터 표현</th><td>레지스터 <b>번호</b></td><td>객체 사전 <b>인덱스</b></td><td>이름 있는 토픽과 메시지 타입</td></tr>
+    <tr><th>보안</th><td>없음</td><td>없음(버스 내부 전제)</td><td>구성에 따라 가능</td></tr>
+  </table></div>
+</section>
+
+<section id="opcua">
+  <h2>7. OPC UA – 공장의 공통 언어</h2>
+  <p>지금까지 본 통신은 제조사·용도마다 달랐고, 대부분 <b>값만 전달</b>했습니다. <b>OPC UA</b>(Open Platform Communications Unified Architecture, <b>IEC 62541</b>)는 단순한 전송 규칙이 아니라, <b>"장비의 데이터를 어떻게 정의하고, 의미를 붙이고, 안전하게 주고받을 것인가"</b>를 정한 응용 계층의 표준입니다. 플랫폼과 프로그래밍 언어에 독립적입니다.</p>
+  <div class="box"><span class="t">비유로 이해하기</span>Modbus가 "<i>4000</i>이라고만 적힌 쪽지"라면, OPC UA는 "<i>Press01(1호 프레스)의 유압 압력은 400.0 bar입니다 (측정 시각, 품질 상태 포함)</i>"라고 적힌 <b>이름표 붙은 서류</b>입니다.</div>
+
+  <h3 id="opcua-stack">OPC UA의 구조</h3>
+  <figure>
+    <svg viewBox="0 0 900 360" role="img" aria-label="OPC UA 계층 구조: 서비스, 정보 모델, 보안 채널, 전송 매핑, TCP/IP">
+      <g font-size="15" text-anchor="middle">
+        <rect x="120" y="10" width="660" height="60" rx="8" fill="#1b9aaa"/><text x="450" y="36" fill="#fff" font-weight="700">서비스 (Application Layer)</text><text x="450" y="57" fill="#fff" font-size="13.5">Read · Write · Browse · Subscribe · Method Call · Event/Alarm</text>
+        <rect x="120" y="76" width="660" height="60" rx="8" fill="#2a86a8"/><text x="450" y="102" fill="#fff" font-weight="700">정보 모델 (Information Modeling)</text><text x="450" y="123" fill="#fff" font-size="13.5">객체 지향 주소 공간 — 노드(Node), 속성(Attribute), 참조(Reference)</text>
+        <rect x="120" y="142" width="660" height="60" rx="8" fill="#3b6fa5"/><text x="450" y="168" fill="#fff" font-weight="700">보안 채널 (Secure Conversation)</text><text x="450" y="189" fill="#fff" font-size="13.5">X.509 인증서, 암호화(AES), 전자서명</text>
+        <rect x="120" y="208" width="660" height="78" rx="8" fill="#d9772b"/><text x="450" y="234" fill="#fff" font-weight="700">전송 매핑 (Mapping &amp; Transport) — 상황에 맞게 고른다</text>
+        <text x="285" y="258" fill="#fff" font-size="13.5">opc.tcp (바이너리, 빠름)</text><text x="615" y="258" fill="#fff" font-size="13.5">HTTPS / WebSocket (방화벽 통과)</text>
+        <text x="285" y="277" fill="#fff" font-size="13.5">UDP / TSN (결정론적 Pub/Sub)</text><text x="615" y="277" fill="#fff" font-size="13.5">MQTT / AMQP (클라우드 브로커)</text>
+        <rect x="120" y="292" width="660" height="50" rx="8" fill="#b35f1e"/><text x="450" y="323" fill="#fff" font-weight="700">TCP / IP / Ethernet</text>
+      </g>
+    </svg>
+    <figcaption>OPC UA는 "값을 보내는 길"뿐 아니라 그 위의 <b>의미(정보 모델)</b>, <b>안전(보안)</b>, <b>사용법(서비스)</b>까지 한 묶음으로 정의한다.</figcaption>
+  </figure>
+
+  <h3 id="opcua-space">주소 공간 – 설비를 트리로 표현한다</h3>
+  <p>OPC UA 서버는 자신이 가진 모든 정보를 <b>노드(Node)</b>로 표현하고, 노드들을 관계(Reference)로 이어 <b>그래프(대개 폴더 같은 트리)</b>를 만듭니다. 클라이언트는 미리 주소를 외우지 않아도 <b>Browse 서비스</b>로 서버에 "<i>무엇이 있나요?</i>"라고 물어 구조를 <b>실행 중에 탐색</b>할 수 있습니다. 수업 실습의 <code>06_opcua_client.py</code>가 바로 이것을 합니다.</p>
+  <figure class="ai"><img src="img/07_address_space_tree.jpg" alt="공장을 폴더 트리 형태의 노드 지도로 표현한 일러스트" onerror="this.closest('figure').remove()"><figcaption>공장을 "폴더 트리"처럼 탐색할 수 있다는 아이디어.</figcaption></figure>
+  <figure>
+    <svg viewBox="0 0 900 400" role="img" aria-label="OPC UA 주소 공간 예시 트리: Objects, Factory, Line1, Press01과 Temp01, 변수와 메소드">
+      <g font-size="14.5">
+        <g stroke="currentColor" stroke-width="1.6" opacity=".55" fill="none">
+          <path d="M120 58 V90 H150"/><path d="M270 118 V150 H300"/><path d="M270 118 V270 H300"/>
+          <path d="M440 178 V210 H470"/><path d="M440 178 V258 H470"/><path d="M440 178 V306 H470"/>
+          <path d="M440 298 V338 H470"/><path d="M440 298 V378 H470" opacity="0"/>
+        </g>
+        <rect x="40" y="30" width="160" height="30" rx="6" fill="#e9eef5" stroke="#8aa0bd"/><text x="120" y="51" text-anchor="middle">Objects (루트)</text>
+        <rect x="150" y="76" width="150" height="30" rx="6" fill="#cfe3f6" stroke="#3b6fa5"/><text x="225" y="97" text-anchor="middle">Factory</text>
+        <rect x="300" y="136" width="150" height="30" rx="6" fill="#cfe3f6" stroke="#3b6fa5"/><text x="375" y="157" text-anchor="middle">Line1</text>
+        <rect x="300" y="256" width="150" height="30" rx="6" fill="#cfe3f6" stroke="#3b6fa5"/><text x="375" y="277" text-anchor="middle">…(다른 라인)</text>
+        <rect x="470" y="196" width="150" height="30" rx="6" fill="#cfe3f6" stroke="#3b6fa5"/><text x="545" y="217" text-anchor="middle">Press01</text>
+        <rect x="470" y="244" width="150" height="30" rx="6" fill="#cfe3f6" stroke="#3b6fa5"/><text x="545" y="265" text-anchor="middle">Temp01</text>
+        <g stroke="currentColor" stroke-width="1.6" opacity=".55" fill="none"><path d="M620 211 H650"/><path d="M620 211 V190 H650"/><path d="M620 211 V232 H650"/><path d="M620 259 H650"/><path d="M620 259 V280 H650"/></g>
+        <rect x="650" y="175" width="230" height="30" rx="6" fill="#fde7cf" stroke="#d9772b"/><text x="765" y="196" text-anchor="middle">HydraulicPressure = 400.0 bar</text>
+        <rect x="650" y="212" width="230" height="30" rx="6" fill="#fde7cf" stroke="#d9772b"/><text x="765" y="233" text-anchor="middle">Status = "Running"</text>
+        <rect x="650" y="249" width="230" height="30" rx="6" fill="#fde7cf" stroke="#d9772b"/><text x="765" y="270" text-anchor="middle">Temperature = 23.5  (수업 실습)</text>
+        <rect x="650" y="286" width="230" height="30" rx="6" fill="#e3f2e6" stroke="#4f8a5b"/><text x="765" y="307" text-anchor="middle">Start() / Stop()  — 메소드</text>
+        <g transform="translate(40,340)">
+          <rect width="16" height="16" rx="3" fill="#cfe3f6" stroke="#3b6fa5"/><text x="24" y="13">객체 (폴더·설비)</text>
+          <rect x="190" width="16" height="16" rx="3" fill="#fde7cf" stroke="#d9772b"/><text x="214" y="13">변수 (값을 가진 노드)</text>
+          <rect x="400" width="16" height="16" rx="3" fill="#e3f2e6" stroke="#4f8a5b"/><text x="424" y="13">메소드 (호출 가능한 기능)</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>OPC UA 주소 공간의 예시. 변수는 값과 함께 <b>단위·시각·품질 상태</b>를 속성으로 가질 수 있고, 메소드로 "시작/정지" 같은 기능을 원격 호출할 수 있다.</figcaption>
+  </figure>
+  <ul>
+    <li>노드의 종류(NodeClass): <b>Object</b>(객체·폴더), <b>Variable</b>(값), <b>Method</b>(기능) 등</li>
+    <li>모든 노드는 공통 속성을 가진다: <b>NodeId</b>(고유 주소), NodeClass, <b>BrowseName</b>, DisplayName, Description, WriteMask … 변수는 여기에 <b>Value</b>와 데이터 형식이 더해진다</li>
+    <li>예) <code>ns=2;s=Press01.HydraulicPressure</code> — 네임스페이스 2 안의 문자열 이름이 <code>Press01.HydraulicPressure</code>인 노드</li>
+  </ul>
+
+  <h3 id="opcua-modes">두 가지 통신 방식 – Client-Server와 Pub/Sub</h3>
+  <figure>
+    <svg viewBox="0 0 900 290" role="img" aria-label="OPC UA 클라이언트-서버(세션, 구독 알림)와 발행-구독(UDP 멀티캐스트 또는 브로커)">
+      <defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+      <g font-size="14.5" text-anchor="middle">
+        <text x="215" y="22" font-weight="700" font-size="16">Client – Server</text>
+        <rect x="20" y="70" width="130" height="90" rx="10" fill="#1b9aaa"/><text x="85" y="108" fill="#fff" font-weight="700">클라이언트</text><text x="85" y="130" fill="#fff" font-size="13">(SCADA, MES)</text>
+        <rect x="280" y="70" width="130" height="90" rx="10" fill="#d9772b"/><text x="345" y="108" fill="#fff" font-weight="700">서버</text><text x="345" y="130" fill="#fff" font-size="13">(설비·게이트웨이)</text>
+        <g stroke="currentColor" stroke-width="2.2" fill="none" marker-end="url(#ar2)"><line x1="152" y1="100" x2="276" y2="100"/></g>
+        <g stroke="currentColor" stroke-width="2.2" fill="none" stroke-dasharray="6 5" marker-end="url(#ar2)"><line x1="276" y1="132" x2="152" y2="132"/></g>
+        <text x="215" y="58" font-size="13">요청: Read / Write / Browse / Call →</text><text x="215" y="188" font-size="13">← 알림: Subscription (변할 때만)</text>
+        <text x="215" y="222" font-size="13.5">1:1 지속 세션 (opc.tcp) · 설정·제어·원격 호출에 적합</text>
+        <text x="215" y="243" font-size="13">폴링 부담을 줄이려고 "바뀔 때만 알려 달라"는 구독을 쓴다</text>
+        <text x="685" y="22" font-weight="700" font-size="16">Pub / Sub (Part 14)</text>
+        <rect x="500" y="50" width="120" height="50" rx="8" fill="#1b9aaa"/><text x="560" y="80" fill="#fff" font-weight="700">발행자 A</text>
+        <rect x="500" y="120" width="120" height="50" rx="8" fill="#1b9aaa"/><text x="560" y="150" fill="#fff" font-weight="700">발행자 B</text>
+        <rect x="660" y="75" width="90" height="70" rx="10" fill="#e9eef5" stroke="#8aa0bd"/><text x="705" y="105" font-size="13">UDP 멀티캐스트</text><text x="705" y="124" font-size="13">또는 브로커</text>
+        <rect x="780" y="50" width="100" height="50" rx="8" fill="#d9772b"/><text x="830" y="80" fill="#fff" font-weight="700">구독자 1</text>
+        <rect x="780" y="120" width="100" height="50" rx="8" fill="#d9772b"/><text x="830" y="150" fill="#fff" font-weight="700">구독자 2</text>
+        <g stroke="currentColor" stroke-width="2" fill="none" marker-end="url(#ar2)"><line x1="622" y1="82" x2="658" y2="100"/><line x1="622" y1="146" x2="658" y2="122"/><line x1="752" y1="100" x2="776" y2="80"/><line x1="752" y1="122" x2="776" y2="144"/></g>
+        <text x="685" y="205" font-size="13.5">1:N 방송 · 서로를 몰라도 된다</text>
+        <text x="685" y="226" font-size="13">TSN과 결합하면 고속·결정론적 분산 동기화에 쓴다</text>
+      </g>
+    </svg>
+    <figcaption>같은 OPC UA 안에서도 "묻고 답하는 방식"과 "방송하는 방식"을 목적에 따라 고른다.</figcaption>
+  </figure>
+
+  <h3 id="opcua-vs">MQTT, REST API와는 경쟁일까?</h3>
+  <p>아닙니다. <b>서로 다른 일을 잘하므로 함께 쓰는 경우가 많습니다.</b></p>
+  <div class="tablewrap"><table>
+    <tr><th></th><th>OPC UA</th><th>MQTT</th><th>REST API (HTTP)</th></tr>
+    <tr><th>핵심 강점</th><td>설비를 <b>의미와 함께 표현</b>하고 접근 (정보 모델, 서비스, 보안)</td><td><b>가볍게 대량 전달</b> (토픽 기반 Pub/Sub)</td><td><b>웹·모바일</b> 서비스와 쉽게 연결 (무상태 요청-응답)</td></tr>
+    <tr><th>약점</th><td>구현이 무겁고 복잡할 수 있다</td><td>페이로드가 그냥 바이트 → <b>단위·의미 해석 규칙이 없다</b></td><td>짧은 주기의 연속 스트리밍에는 헤더·연결 비용이 크다</td></tr>
+    <tr><th>어울리는 곳</th><td>현장 설비 ↔ SCADA/MES</td><td>장치 → 클라우드 수집</td><td>ERP 연동, 웹 대시보드</td></tr>
+  </table></div>
+  <ul>
+    <li><b>OPC UA over MQTT</b>: OPC UA의 데이터 모델(의미)을 MQTT로 실어 클라우드로 보내는 방식 (OPC UA Part 14). "<i>의미 있는 데이터를, 가볍게</i>".</li>
+    <li><b>현장 내부는 OPC UA 바이너리</b>로 빠르게, <b>위쪽 웹 화면·ERP 연동은 게이트웨이가 REST(JSON)</b>로 바꿔 제공한다.</li>
+  </ul>
+</section>
+
+<section id="integrate">
+  <h2>8. 오래된 설비를 OPC UA로 – 에지 게이트웨이</h2>
+  <p>공장의 모든 설비를 최신 기종으로 바꾸는 것은 비용상 불가능합니다. 그래서 <b>오래된 설비는 그대로 두고, 옆에 "통역사"(에지 게이트웨이)를 둡니다</b>.</p>
+  <figure class="ai"><img src="img/04_gateway_translator.jpg" alt="여러 레거시 설비의 시리얼 케이블을 게이트웨이가 하나의 표준 연결로 바꿔 클라우드에 전달하는 일러스트" onerror="this.closest('figure').remove()"><figcaption>게이트웨이는 제각각인 옛 방식을 하나의 표준 언어로 통역한다.</figcaption></figure>
+  <ol>
+    <li>오래된 PLC·계측기를 게이트웨이의 RS-485/이더넷 포트에 연결한다.</li>
+    <li>게이트웨이의 소프트웨어(예: Node-RED, Kepware, 오픈소스 커넥터)가 <b>Modbus 레지스터를 주기적으로 읽는다(폴링)</b>.</li>
+    <li>읽은 값을 <b>이름·단위·배율을 붙여 OPC UA 노드로 매핑</b>한다.</li>
+    <li>상위 SCADA/MES는 <b>레지스터 번호를 알 필요 없이</b> OPC UA로 읽고 쓴다.</li>
+  </ol>
+  <figure>
+    <svg viewBox="0 0 900 250" role="img" aria-label="Modbus 레지스터 40001이 게이트웨이를 거쳐 OPC UA 노드 Press01.HydraulicPressure로 변환되는 예">
+      <defs><marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+      <g font-size="14.5" text-anchor="middle">
+        <rect x="10" y="40" width="230" height="130" rx="12" fill="#b35f1e"/><text x="125" y="72" fill="#fff" font-weight="700">레거시 설비 (Modbus)</text>
+        <text x="125" y="102" fill="#fff" font-size="13.5">레지스터 <tspan font-family="monospace">40001</tspan></text><text x="125" y="124" fill="#fff" font-size="13.5">값: 4000 (원시 숫자)</text><text x="125" y="146" fill="#fff" font-size="12.5" opacity=".9">의미·단위 정보 없음</text>
+        <rect x="335" y="30" width="230" height="150" rx="12" fill="#3b6fa5"/><text x="450" y="62" fill="#fff" font-weight="700">에지 게이트웨이</text>
+        <text x="450" y="92" fill="#fff" font-size="13.5">① 주기적으로 읽는다 (폴링)</text><text x="450" y="114" fill="#fff" font-size="13.5">② 배율 ×0.1 적용</text><text x="450" y="136" fill="#fff" font-size="13.5">③ 이름과 단위를 붙인다</text><text x="450" y="158" fill="#fff" font-size="12.5" opacity=".9">(매핑 규칙은 사람이 설정)</text>
+        <rect x="660" y="40" width="230" height="130" rx="12" fill="#1b9aaa"/><text x="775" y="72" fill="#fff" font-weight="700">OPC UA 서버</text>
+        <text x="775" y="100" fill="#fff" font-size="12.5" font-family="monospace">ns=2;s=Press01.</text><text x="775" y="118" fill="#fff" font-size="12.5" font-family="monospace">HydraulicPressure</text><text x="775" y="146" fill="#fff" font-size="14" font-weight="700">400.0 bar</text>
+      </g>
+      <g stroke="currentColor" stroke-width="2.4" fill="none" marker-end="url(#ar3)"><line x1="242" y1="105" x2="331" y2="105"/><line x1="567" y1="105" x2="656" y2="105"/></g>
+      <text x="450" y="225" font-size="14" text-anchor="middle">예시 값입니다. 실제 배율과 이름은 설비 매뉴얼과 현장 설정에 따라 정합니다.</text>
+    </svg>
+    <figcaption>게이트웨이가 "<b>4000</b>"이라는 숫자에 <b>이름(Press01.HydraulicPressure), 배율, 단위(bar)</b>를 붙여 OPC UA 노드로 바꾼다. 의미를 붙이는 일이 핵심이다.</figcaption>
+  </figure>
+  <h3>이동 로봇(AMR)은 어떻게 연결할까</h3>
+  <ul>
+    <li>로봇 <b>안쪽</b>은 ROS 2(주행 계산)와 CANopen(모터·배터리·안전 센서)으로 돌아간다.</li>
+    <li>공장 관제(FMS)는 로봇의 라이다 점군 같은 <b>고주기 원시 데이터가 필요하지 않다</b>. 위치, 배터리 잔량, 작업 상태 같은 <b>요약 정보</b>만 필요하다.</li>
+    <li>그래서 로봇 안의 IPC에 <b>OPC UA 서버(래퍼)</b>를 두어, ROS 2의 상위 상태 토픽(<code>/amr/pose</code>, <code>/amr/battery_state</code> …)을 OPC UA 노드로 보여 주고, 작업 지시는 <b>OPC UA 메소드 호출</b>(<code>ExecuteMission(TargetStation=B3)</code>)로 받는다.</li>
+  </ul>
+  <div class="box tip"><span class="t">🔄 단계적 전환이 정답</span>모든 것을 한 번에 교체하지 않고 <b>① 레거시는 게이트웨이로 OPC UA화</b>, <b>② 신규 설비는 처음부터 표준 프로토콜 탑재</b>를 <b>동시에</b> 진행하는 "투트랙" 접근이 현실적입니다.</div>
+</section>
+
+<section id="cautions">
+  <h2>9. 현장에서 꼭 기억할 것</h2>
+  <div class="cols">
+    <div class="card"><h4>📶 무선 연결과 로밍</h4><p>이동 로봇이 움직이며 Wi-Fi 접속 장치(AP)를 바꿀 때 <b>순간적으로 패킷이 끊기거나 TCP가 다시 연결</b>되는 일이 생길 수 있다. 일반 상용 Wi-Fi 대신 빠른 로밍을 지원하는 <b>산업용 Wi-Fi 6</b>나, 지연이 짧은 <b>5G 특화망(이음 5G 등)</b>을 검토한다.</p></div>
+    <div class="card"><h4>🛑 기능 안전은 네트워크에 맡기지 않는다</h4><p><b>비상 정지(E-Stop)와 인명 보호 기능은 무선 OPC UA 네트워크에 절대 의존하면 안 된다.</b> 안전 규격(ISO 13849 PL d/e, IEC 62061 SIL 2/3)을 만족하는 <b>세이프티 컨트롤러와 안전 라이다</b>가 구동 전원을 <b>직접 차단</b>하도록 설계한다.</p></div>
+    <div class="card"><h4>🔒 보안</h4><p>Modbus 같은 옛 통신은 <b>인증·암호화가 없다</b>. 폐쇄망이 열리면 위험해지므로 게이트웨이와 상위 구간에 OPC UA의 <b>인증서 기반 보안</b>, 네트워크 분리(구역 나누기)를 적용한다. 이 수업의 실습 서버는 <b>보안을 끈 학습용</b>이다.</p></div>
+  </div>
+  <div class="box warn"><span class="t">⚠ 수업 실습과 실제 현장의 차이</span>실습의 MQTT 브로커와 OPC UA 서버는 <b>인증 없음·암호화 없음</b>으로 열어 두었습니다. 실제 설비에서는 이렇게 하면 안 됩니다.</div>
+</section>
+
+<section id="lab">
+  <h2>10. 수업 실습과 연결하기</h2>
+  <p>수업의 OPC UA 실습(<code>Net2_Intro/python/06_opcua_*.py</code>)은 이 문서의 개념을 작은 규모로 체험하는 것입니다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>실습에서 한 일</th><th>이 문서의 어디와 연결되나</th></tr>
+    <tr><td><b>Browse</b>: 서버에 "무엇이 있나요?" → <code>Factory / Line1 / Temp01 / …</code> 트리</td><td>7절 <a href="#opcua-space">주소 공간</a> — 폴더 같은 트리, 런타임 탐색</td></tr>
+    <tr><td><b>Read</b>: <code>Temperature</code> 값을 읽는다</td><td>7절 — Client-Server의 요청·응답. Modbus의 "레지스터 읽기"와 비교(6절)</td></tr>
+    <tr><td><b>Write</b>: <code>Setpoint</code>는 써지고, <code>Temperature</code>는 쓰기 거부(<code>BadUserAccessDenied</code>)</td><td>7절 — 노드 속성(쓰기 가능 여부), 9절 — 보안과 권한</td></tr>
+    <tr><td><b>Subscription</b>: 값이 바뀔 때마다 알림</td><td>7절 <a href="#opcua-modes">Client-Server와 Pub/Sub</a> — 폴링 부담을 줄이는 구독</td></tr>
+    <tr><td><b>캡처</b>: <code>HEL → ACK → OPN → MSG … → CLO</code> 바이너리</td><td>7절 <a href="#opcua-stack">구조</a> — opc.tcp 바이너리 전송, 보안 채널(OPN)</td></tr>
+  </table></div>
+  <div class="box"><span class="t">🔍 실습 후에 생각해 보기</span>실습의 서버는 사실 <b>8절의 "게이트웨이가 만든 OPC UA 서버"</b>와 같은 모습입니다. 서버 안의 온도 값이 가상이라는 점만 다릅니다. 실제 공장에서는 그 값이 Modbus 레지스터나 PLC에서 올라옵니다.</div>
+</section>
+
+<section id="glossary">
+  <h2>11. 용어 사전</h2>
+  <div class="tablewrap"><table>
+    <tr><th>용어</th><th>쉬운 설명</th></tr>
+    <tr><td><b>OT / IT</b></td><td>공장 설비를 움직이는 기술 / 사무·정보 시스템 기술</td></tr>
+    <tr><td><b>PLC / PAC</b></td><td>설비의 순서·논리를 정해진 주기로 실행하는 산업용 제어기 / 모션·비전·IT까지 통합한 상급 제어기</td></tr>
+    <tr><td><b>HMI / SCADA</b></td><td>설비 옆 조작 화면 / 여러 설비를 한꺼번에 감시·제어하는 관제 시스템</td></tr>
+    <tr><td><b>MES / ERP / WMS</b></td><td>현장 생산 실행 관리 / 기업 자원(주문·재고·회계) 관리 / 창고 관리</td></tr>
+    <tr><td><b>센서 / 액추에이터</b></td><td>물리량을 읽는 장치 / 제어 신호를 힘·동작으로 바꾸는 장치(모터, 밸브 등)</td></tr>
+    <tr><td><b>스캔 타임</b></td><td>PLC가 "입력 → 계산 → 출력"을 한 바퀴 도는 데 쓰는 고정 주기</td></tr>
+    <tr><td><b>결정론 / 지터</b></td><td>항상 정해진 시간 안에 끝나는 성질 / 반응 시간의 들쭉날쭉함</td></tr>
+    <tr><td><b>RTOS</b></td><td>정해진 시간 안의 반응을 보장하도록 만든 운영체제</td></tr>
+    <tr><td><b>필드버스</b></td><td>센서·드라이브·제어기를 잇는 현장 통신 (Modbus, CANopen, Profinet, EtherCAT 등)</td></tr>
+    <tr><td><b>Modbus</b></td><td>1979년에 나온 단순한 요청-응답 현장 통신. 레지스터 번호로만 데이터를 표현</td></tr>
+    <tr><td><b>CAN / CANopen</b></td><td>차량·로봇 내부의 버스 / 그 위에 "무엇을 주고받을지"를 표준화한 규격</td></tr>
+    <tr><td><b>PDO / SDO</b></td><td>CANopen의 빠른 실시간 값 전송 / 설정·파라미터 읽기·쓰기</td></tr>
+    <tr><td><b>AMR / AGV</b></td><td>스스로 길을 찾는 이동 로봇 / 정해진 경로를 따라 다니는 무인 운반차</td></tr>
+    <tr><td><b>ROS 2 / DDS</b></td><td>로봇 소프트웨어 프레임워크 / 브로커 없이 노드끼리 직접 주고받는 Pub/Sub 미들웨어</td></tr>
+    <tr><td><b>OPC UA</b></td><td>장비 데이터를 의미·보안과 함께 주고받는 산업용 표준 (IEC 62541)</td></tr>
+    <tr><td><b>노드 / 주소 공간</b></td><td>OPC UA의 정보 단위 / 노드들이 이루는 트리(그래프) 구조</td></tr>
+    <tr><td><b>Browse / Read / Write</b></td><td>OPC UA에서 구조 탐색 / 값 읽기 / 값 쓰기</td></tr>
+    <tr><td><b>Subscription</b></td><td>값이 바뀔 때만 서버가 알려 주는 구독 방식</td></tr>
+    <tr><td><b>TSN</b></td><td>이더넷에서 시간에 민감한 통신을 보장하는 기술 모음 (Time-Sensitive Networking)</td></tr>
+    <tr><td><b>에지 게이트웨이</b></td><td>현장 옆에서 서로 다른 통신을 통역해 주는 작은 산업용 컴퓨터</td></tr>
+    <tr><td><b>벤더 락인</b></td><td>한 제조사 방식에 묶여 다른 제품과 연결·교체가 어려워지는 상태</td></tr>
+    <tr><td><b>예지보전 (PdM)</b></td><td>데이터를 분석해 고장을 미리 예측하고 정비하는 방식</td></tr>
+    <tr><td><b>기능 안전</b></td><td>사람·설비를 지키기 위해 위험할 때 반드시 안전 상태로 만드는 설계 (E-Stop 등)</td></tr>
+  </table></div>
+</section>
+
+<section id="check">
+  <h2>12. 스스로 점검</h2>
+  <p>답을 먼저 생각해 본 뒤 눌러서 확인하세요.</p>
+  <details><summary>1. PLC가 일반 PC보다 "느린 계산"을 하는데도 공장에서 PC로 대체되지 않는 이유는?</summary>
+    <p>속도가 아니라 <b>정해진 주기를 반드시 지키는 것(결정론)</b>이 목적이기 때문이다. PC는 운영체제의 스케줄링과 백그라운드 작업으로 반응 시간이 들쭉날쭉하고, 공장 환경(먼지·진동·노이즈)에도 약하다. 또 24V·4~20mA 신호를 직접 연결하도록 설계되지 않았다.</p></details>
+  <details><summary>2. Modbus로 읽은 값 "4000"을 IT 시스템이 바로 쓰기 어려운 이유는? 어떻게 해결하나?</summary>
+    <p>값의 <b>이름, 단위, 배율</b>이 없어서 사람이 매뉴얼로 해석해야 하기 때문이다. 게이트웨이에서 이름·단위·배율을 붙여 <b>OPC UA 노드</b>(예: <code>Press01.HydraulicPressure = 400.0 bar</code>)로 바꾸면 상위 시스템은 의미를 그대로 쓸 수 있다.</p></details>
+  <details><summary>3. 딥러닝 비전 검사를 PLC 안에서 직접 돌리지 않고 Edge AI 박스로 분리하는 이유는?</summary>
+    <p>GPU 계산은 시간 편차(지터)가 커서 고정 주기 제어를 방해할 수 있다. 그래서 <b>제어 도메인과 AI 도메인을 분리</b>하고, AI는 불량 판정 같은 <b>결과만</b> PLC에 알려 준다.</p></details>
+  <details><summary>4. MQTT와 OPC UA는 경쟁 관계인가? 같이 쓰면 어떤 장점이 있나?</summary>
+    <p>경쟁이라기보다 <b>보완</b>이다. MQTT는 가볍게 대량 전달하는 데 강하지만 데이터의 의미 규칙이 없고, OPC UA는 의미(정보 모델)와 보안을 제공한다. <b>OPC UA over MQTT</b>로 "의미 있는 데이터를 가볍게" 클라우드에 보낼 수 있다.</p></details>
+  <details><summary>5. 이동 로봇의 비상 정지를 상위 OPC UA 명령으로 처리하면 왜 안 될까?</summary>
+    <p>무선 네트워크는 로밍·지연·단절이 생길 수 있어 <b>안전 기능의 신뢰성을 보장할 수 없다</b>. 비상 정지와 인명 보호는 로봇 안의 <b>세이프티 컨트롤러·안전 라이다</b>가 전원을 직접 차단하는 방식으로 네트워크와 무관하게 동작해야 한다.</p></details>
+  <details><summary>6. 수업 실습의 OPC UA 서버와 실제 공장의 OPC UA 서버는 무엇이 다른가?</summary>
+    <p>실습 서버는 값이 <b>가상</b>이고 <b>보안이 꺼져</b> 있다. 실제 공장에서는 값이 PLC·센서·Modbus 레지스터에서 올라오고, 인증서 기반 보안과 권한 관리를 켠다.</p></details>
+</section>
+
+<footer>
+  <p><b>참고·출처</b>: 본 문서는 「제조 산업 환경의 디바이스 및 네트워킹 기술 백서」(내부 정리 자료)를 바탕으로, 수강생이 읽기 쉽도록 비유와 도식을 보태 구성했습니다. 규격의 세부(IEC 62541 OPC UA, IEC 61131-3, ISO 13849, IEC 62061 등)는 해당 표준과 제조사 문서를 확인하세요.</p>
+  <p><b>그림</b>: 첫 번째 대표 이미지는 AI 이미지 모델로 생성했습니다. 도식(SVG)은 AI 도구로 작성한 것으로, 개념을 설명하기 위한 단순화된 그림이며 실제 제품의 사양이 아닙니다. 분위기용 일러스트는 <code>img/</code> 폴더에 파일이 있을 때만 표시됩니다(<code>tools/PROMPTS.md</code> 참고).</p>
+  <p>저장소: <a href="https://github.com/inetguru/AIoT_Networking">github.com/inetguru/AIoT_Networking</a> · 작성: 부산대학교 정보컴퓨터공학부 김종덕 · 2026-11</p>
+</footer>
+</main>
+</div>
+</body>
+</html>

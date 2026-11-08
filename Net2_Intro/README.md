@@ -57,6 +57,8 @@ PowerShell에서 `Net2_Intro` 폴더로 이동한 뒤:
 > 브로커 로그는 `docker compose logs mosquitto` (연결과 구독이 기록된다).
 
 ### 5. 공장 설비의 표준 (OPC UA)
+> 배경이 궁금하면 보조 문서 [제조 현장의 디바이스와 네트워킹](../docs/industrial-iot/index.html)을 먼저 읽어 보라 (PLC, Modbus, OPC UA가 왜 필요한지).
+
 | 실행 | 확인할 것 |
 |---|---|
 | `.\run.cmd 06_opcua_client.py` | **Browse**(서버가 가진 것을 트리로 탐색), **Read**, **Write**, 쓰기 불가 변수에 쓰면 거부 |
