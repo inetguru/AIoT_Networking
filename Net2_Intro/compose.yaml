@@ -1,0 +1,102 @@
+# Net2_Intro 실습 - 네트워크 프로그래밍 (II): 서버 구조, 연결 방식, Pub/Sub
+#   .\run.cmd 01_load_client.py             Python 파일 실행 (서버들이 자동으로 함께 시작된다)
+#   .\run.cmd capture.py mqtt               통신을 캡처 -> captures\live_mqtt.pcap (Wireshark 로 열기)
+#   docker compose logs mosquitto           서버 쪽 로그 보기 (서비스 이름: 아래 services 참고)
+#   docker compose down                     정리
+
+x-lab: &lab
+  image: ghcr.io/inetguru/aiot-lab:v2
+  working_dir: /work
+  volumes:
+    - ./python:/work
+
+services:
+  # ---- 클라이언트 (우리가 실행하는 쪽). 이 컨테이너의 eth0 에서 tcpdump 로 캡처한다
+  py:
+    <<: *lab
+    entrypoint: ["python3", "-u"]
+    volumes:
+      - ./python:/work
+      - ./captures:/captures
+    cap_add: [NET_RAW]
+    depends_on:
+      srv-blocking: {condition: service_healthy}
+      srv-threaded: {condition: service_healthy}
+      srv-async: {condition: service_healthy}
+      chat: {condition: service_healthy}
+      sensor: {condition: service_healthy}
+      web: {condition: service_healthy}
+      mosquitto: {condition: service_healthy}
+      opcua: {condition: service_healthy}
+
+  # ---- 실습 1: 세 가지 서버 (blocking / threaded / async)
+  srv-blocking:
+    <<: *lab
+    command: ["python3", "-u", "01_servers.py", "blocking", "9100"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':238C ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 60
+  srv-threaded:
+    <<: *lab
+    command: ["python3", "-u", "01_servers.py", "threaded", "9101"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':238D ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 60
+  srv-async:
+    <<: *lab
+    command: ["python3", "-u", "01_servers.py", "async", "9102"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':238E ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 60
+
+  # ---- 실습 2: Stateless / Stateful 챗봇 서버
+  chat:
+    <<: *lab
+    command: ["python3", "-u", "02_chat_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':23F0 ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  # ---- 실습 3: Polling / SSE / WebSocket 센서 서버 (HTTP 8080, WebSocket 8765)
+  sensor:
+    <<: *lab
+    command: ["python3", "-u", "03_sensor_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; d = open('/proc/net/tcp').read(); sys.exit(0 if ':1F90 ' in d and ':223D ' in d else 1)"]
+      interval: 1s
+      retries: 30
+
+  # ---- 실습 4: HTTP Keep-Alive 실험용 서버 (Web_Intro 의 모의 기상청 서버 재사용)
+  web:
+    image: ghcr.io/inetguru/aiot-lab:v2
+    working_dir: /mock
+    volumes:
+      - ../Web_Intro/mock-kma:/mock
+    command: node server.js
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; d = open('/proc/net/tcp').read() + open('/proc/net/tcp6').read(); sys.exit(0 if ':0FA0 ' in d else 1)"]
+      interval: 1s
+      retries: 30
+
+  # ---- 실습 5: MQTT 브로커 (공식 Eclipse Mosquitto 이미지)
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+      interval: 1s
+      retries: 30
+
+  # ---- 실습 6: OPC UA 서버
+  opcua:
+    <<: *lab
+    command: ["python3", "-u", "06_opcua_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':12E8 ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
