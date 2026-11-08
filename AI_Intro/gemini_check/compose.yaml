@@ -1,0 +1,12 @@
+# Gemini 접근 점검 - 실행:  .\run.cmd   (또는 docker compose run --rm py check_gemini.py)
+services:
+  py:
+    image: ghcr.io/inetguru/aiot-lab:node24
+    working_dir: /work
+    volumes:
+      - .:/work
+    entrypoint: ["python3", "-u"]
+    command: ["check_gemini.py"]
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
