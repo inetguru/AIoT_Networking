@@ -7,13 +7,14 @@ Node.js(Express) 웹 서버를 만들어 보고, 브라우저에서 Open API를 
 ## 준비 (수업 전날까지)
 
 1. Docker Desktop을 실행하고 좌측 하단이 **Engine running** 인지 확인한다.
-2. 이 폴더(`Web_Intro`)에서 PowerShell을 열고 아래를 실행한다.
-
-   ```
-   powershell -ExecutionPolicy Bypass -File .\check.ps1
-   ```
+2. 이 폴더(`Web_Intro`)의 **`check.cmd` 를 더블클릭**한다.
+   (또는 PowerShell에서 `.\check.cmd` 입력)
 
    모두 `[OK]` 가 나오면 준비 끝. (실습 이미지를 미리 내려받는 작업 포함)
+
+   > `check.ps1` 을 직접 실행하면 "디지털 서명이 없다"는 오류가 날 수 있다.
+   > 인터넷에서 받은 스크립트를 Windows가 막기 때문이니 `check.cmd` 를 사용한다.
+   > "Windows가 PC를 보호했습니다" 창이 뜨면 **추가 정보 → 실행**을 누른다.
 
 ## 실습 방법
 
