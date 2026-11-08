@@ -1,7 +1,7 @@
 # Gemini API 접근 점검 (수업에서 쓸 수 있는지 확인용)
 #   학생 계정(대학 Google Workspace)으로 발급한 API 키로 아래 4가지를 차례로 확인한다.
 #     1) 키가 유효하고, 사용 가능한 모델 목록이 보이는가       (GET  /v1beta/models)
-#     2) 글을 생성할 수 있는가                                 (POST :generateContent)
+#     2) 글을 생성할 수 있는가 (무료로 열려 있는 모델 탐색)    (POST :generateContent)
 #     3) 함수 호출(Tool Calling)이 되는가                      (tools / functionDeclarations)
 #     4) 스트리밍(SSE)으로 조금씩 받을 수 있는가               (:streamGenerateContent?alt=sse)
 #   키는 코드에 쓰지 않고 환경변수 GEMINI_API_KEY 로 받는다 (.env 에 넣는다).
@@ -13,7 +13,7 @@ import requests
 
 BASE = "https://generativelanguage.googleapis.com/v1beta"
 KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-FORCED_MODEL = os.environ.get("GEMINI_MODEL", "").strip()     # 지정하면 이 모델로 시험
+FORCED_MODEL = os.environ.get("GEMINI_MODEL", "").strip()     # 지정하면 이 모델만 시험
 results = []                                                  # (항목, 성공 여부, 메모)
 
 
@@ -30,7 +30,7 @@ def diagnose(r):
         401: "인증 실패: 키가 없거나 잘못되었습니다",
         403: "권한 없음: 이 계정/프로젝트에서 Gemini API 사용이 허용되지 않았을 수 있습니다 (관리자 정책, 지역, 나이 제한)",
         404: "모델 이름이 없습니다 (모델이 바뀌었거나 이 키로는 쓸 수 없음)",
-        429: "호출 한도 초과 (무료 한도). 잠시 후 다시 시도하거나 다른 모델을 써 보세요",
+        429: "호출 한도 초과 또는 이 모델은 무료 계층에서 열려 있지 않음 (limit: 0)",
         500: "Google 서버 오류. 잠시 후 다시 시도",
         503: "서버가 바쁩니다. 잠시 후 다시 시도",
     }.get(r.status_code, "")
@@ -46,25 +46,27 @@ def call(method, url, **kw):
     return r, time.time() - t0
 
 
-def pick_model(models):
-    """generateContent 를 지원하는 텍스트용 flash 모델 중 하나를 고른다."""
-    bad = ("image", "tts", "audio", "live", "embedding", "robotics", "computer", "veo", "imagen", "native", "preview-")
-    ok = []
-    for m in models:
-        name = m["name"].replace("models/", "")
-        if "generateContent" not in m.get("supportedGenerationMethods", []):
-            continue
-        if "flash" in name and not any(b in name for b in bad):
-            ok.append(name)
-    stable = [n for n in ok if "preview" not in n and "exp" not in n and "latest" not in n]
-    pool = stable or ok
-    return sorted(pool)[-1] if pool else None
+def pick_models(models):
+    """generateContent 를 지원하는 텍스트용 flash 모델을 '후보 순서'대로 돌려준다.
+    일부 모델(omni, 미리보기 등)은 무료 한도가 0 이므로 안정 버전 -> lite -> 나머지 순으로 시도한다."""
+    bad = ("image", "tts", "audio", "live", "embedding", "robotics", "computer", "veo", "imagen",
+           "native", "omni", "antigravity", "deep-research")
+    gen = [m["name"].replace("models/", "") for m in models
+           if "generateContent" in m.get("supportedGenerationMethods", [])]
+    flash = [n for n in gen if "flash" in n and not any(b in n for b in bad)]
+
+    def is_stable(n):
+        return not any(x in n for x in ("preview", "exp", "latest"))
+    full = sorted([n for n in flash if is_stable(n) and "lite" not in n], reverse=True)
+    lite = sorted([n for n in flash if is_stable(n) and "lite" in n], reverse=True)
+    rest = sorted([n for n in flash if not is_stable(n)], reverse=True)
+    return full + lite + rest
 
 
 if not KEY:
     sys.exit("GEMINI_API_KEY 가 설정되어 있지 않습니다.\n"
              "  1) https://aistudio.google.com/apikey 에서 API 키를 만든다\n"
-             "  2) API_Intro 와 같은 방식으로 .env 에 GEMINI_API_KEY=키 를 넣는다 (.env.example 참고)")
+             "  2) 이 폴더에 .env 파일을 만들고 GEMINI_API_KEY=키 를 넣는다 (.env.example 참고)")
 
 print(f"키 길이: {len(KEY)} (값은 출력하지 않음)\n")
 
@@ -88,28 +90,47 @@ if len(gen) > 12:
     print(f"   ... 외 {len(gen) - 12}개")
 results.append(("모델 목록", True, f"{len(gen)}개"))
 
-model = FORCED_MODEL or pick_model(models)
-if not model:
+candidates = [FORCED_MODEL] if FORCED_MODEL else pick_models(models)
+if not candidates:
     sys.exit("시험할 flash 모델을 찾지 못했습니다. GEMINI_MODEL 로 모델 이름을 지정하세요.")
-print(f"\n  시험에 사용할 모델: {model}\n")
 
-# ---- 2) 글 생성 ---------------------------------------------------------------
-print("[2] 글 생성 (generateContent)")
+# ---- 2) 글 생성 (후보 모델을 차례로 시도) -------------------------------------
+print("\n[2] 글 생성 (generateContent) - 무료로 쓸 수 있는 모델을 찾는다")
 body = {"contents": [{"role": "user", "parts": [{"text": "한 문장으로 답해 줘: HTTP API란 무엇인가?"}]}]}
-r, sec = call("POST", f"{BASE}/models/{model}:generateContent", json=body)
-if r.status_code == 200:
-    data = r.json()
+model = None
+print("  후보:", ", ".join(candidates[:6]))
+for cand in candidates[:6]:
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except (KeyError, IndexError):
-        text = "(응답 형식이 예상과 다름) " + json.dumps(data, ensure_ascii=False)[:200]
-    usage = data.get("usageMetadata", {})
-    print(f"  성공 ({sec:.1f}초)\n  응답: {text}")
-    print(f"  토큰: 입력 {usage.get('promptTokenCount')}, 출력 {usage.get('candidatesTokenCount')}, 합계 {usage.get('totalTokenCount')}")
-    results.append(("글 생성", True, f"{sec:.1f}초"))
-else:
-    print("  실패:", diagnose(r))
-    results.append(("글 생성", False, f"HTTP {r.status_code}"))
+        r, sec = call("POST", f"{BASE}/models/{cand}:generateContent", json=body, timeout=40)
+    except requests.exceptions.Timeout:
+        print(f"  [{cand}] 사용 불가: 40초 안에 응답이 없음 (Timeout)")
+        continue
+    except requests.RequestException as e:
+        print(f"  [{cand}] 사용 불가: 네트워크 오류 {type(e).__name__}")
+        continue
+    if r.status_code == 200:
+        model = cand
+        data = r.json()
+        try:
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (KeyError, IndexError):
+            text = "(응답 형식이 예상과 다름) " + json.dumps(data, ensure_ascii=False)[:200]
+        usage = data.get("usageMetadata", {})
+        print(f"  [{cand}] 성공 ({sec:.1f}초)")
+        print(f"  응답: {text}")
+        print(f"  토큰: 입력 {usage.get('promptTokenCount')}, 출력 {usage.get('candidatesTokenCount')}, 합계 {usage.get('totalTokenCount')}")
+        results.append(("글 생성", True, f"{cand}, {sec:.1f}초"))
+        break
+    first_line = diagnose(r).splitlines()[0][:110]
+    print(f"  [{cand}] 사용 불가: {first_line}")
+if model is None:
+    print("  → 시도한 모델이 모두 실패했습니다. 위 사유를 확인하세요.")
+    results.append(("글 생성", False, "사용 가능한 모델 없음"))
+    print("\n=== 결과 요약 ===")
+    for name, ok_, note in results:
+        print(f"  [{'OK' if ok_ else 'FAIL'}] {name}  {note}")
+    sys.exit(1)
+print(f"\n  이후 단계에 사용할 모델: {model}")
 
 # ---- 3) 함수 호출 (Tool Calling) -----------------------------------------------
 print("\n[3] 함수 호출 (Tool Calling) - 수업의 get_temperature 와 같은 함수를 AI에게 알려 준다")
@@ -146,6 +167,7 @@ try:
                       headers={"x-goog-api-key": KEY}, json=body, stream=True, timeout=60)
     if r.status_code == 200:
         chunks = []
+        r.encoding = "utf-8"          # SSE 응답에는 문자 집합 표시가 없어 requests가 Latin-1로 읽는다 -> 한글이 깨짐
         for line in r.iter_lines(decode_unicode=True):
             if line and line.startswith("data: "):
                 try:
@@ -167,7 +189,7 @@ except requests.RequestException as e:
 
 # ---- 요약 ---------------------------------------------------------------------
 print("\n=== 결과 요약 ===")
-for name, ok, note in results:
-    print(f"  [{'OK' if ok else 'FAIL'}] {name}  {note}")
+for name, ok_, note in results:
+    print(f"  [{'OK' if ok_ else 'FAIL'}] {name}  {note}")
 print("\n참고: 무료 사용량의 입력 내용은 Google 제품 개선에 사용될 수 있다. 민감한 정보는 넣지 않는다.")
-sys.exit(0 if all(ok for _, ok, _ in results) else 1)
+sys.exit(0 if all(ok_ for _, ok_, _ in results) else 1)
