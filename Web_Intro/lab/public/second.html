@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>second</title></head>
+<body>
+<script src="/work1.js"></script>
+
+<button onclick="onClick()">Click</button>
+
+<script>
+var nClick = 0;
+function onClick() {
+    nClick = nClick + 1;
+    if (nClick % 2)
+        getMyStr1();
+    else
+        getMyStr2();
+};
+function onMyStr(outStr) {
+    document.getElementById("demo").innerHTML = outStr;
+};
+</script>
+
+<p id="demo"></p>
+</body>
+</html>

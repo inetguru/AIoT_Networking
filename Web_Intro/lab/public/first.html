@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>first</title></head>
+<body>
+
+<button onclick="onClick()">Click</button>
+
+<script>
+var nClick = 0;
+var outStr;
+function onClick() {
+    nClick = nClick + 1;
+    if (nClick % 2)
+        outStr = "T1:";
+    else
+        outStr = "T2:";
+    outStr = outStr + Date();
+    document.getElementById("demo").innerHTML = outStr;
+};
+</script>
+
+<p id="demo"></p>
+
+<!-- 질문: 위 JavaScript 코드는 어디에서 실행될까? Node.js 서버 vs 브라우저 -->
+</body>
+</html>

@@ -1,0 +1,55 @@
+# Web_Intro 실습 - 한 번에 하나의 step만 실행한다 (모두 3000번 포트 사용)
+#   docker compose up step0     Hello World
+#   docker compose up step1     Routing
+#   docker compose up step2     Static Files + 브라우저에서 직접 호출(CORS 오류)
+#   docker compose up step3     Node 서버가 대신 호출(프록시)
+# 종료: Ctrl+C  /  정리: docker compose down
+
+x-lab: &lab
+  image: ghcr.io/inetguru/aiot-lab:node24
+  working_dir: /lab
+  volumes:
+    - ./lab:/lab
+  environment:
+    KMA_BASE: ${KMA_BASE:-http://mock-kma:4000}
+    KMA_KEY: ${KMA_KEY:-mock-key}
+
+services:
+  step0:
+    <<: *lab
+    command: node app0.js
+    ports: ["3000:3000"]
+
+  step1:
+    <<: *lab
+    command: node app1.js
+    ports: ["3000:3000"]
+
+  step2:
+    <<: *lab
+    command: node app2.js
+    ports: ["3000:3000"]
+    depends_on: [mock-kma]
+
+  step3:
+    <<: *lab
+    command: node app3.js
+    ports: ["3000:3000"]
+    depends_on: [mock-kma]
+
+  # 기상청 초단기실황 API를 흉내 내는 모의 서버 (CORS 헤더를 일부러 보내지 않는다)
+  mock-kma:
+    image: ghcr.io/inetguru/aiot-lab:node24
+    working_dir: /mock
+    volumes:
+      - ./mock-kma:/mock
+    command: node server.js
+    ports: ["4000:4000"]
+
+  # 필요할 때만: docker compose run --rm shell
+  shell:
+    <<: *lab
+    profiles: ["tools"]
+    command: bash
+    stdin_open: true
+    tty: true
