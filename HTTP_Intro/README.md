@@ -16,3 +16,6 @@ Wireshark로 패킷을 열어 보며 계층 구조(HTTP–TCP–IP), TCP 3-way h
 1. [Wireshark](https://www.wireshark.org/) 설치 후 파일을 연다.
 2. 표시 필터 예: `tcp.flags.syn == 1` (연결 시작), `http`, `tls.handshake`
 3. 세 파일에서 같은 서버와의 통신이 **어떻게 다르게 보이는지** 비교해 보라.
+
+## 직접 캡처해 보기
+녹화된 파일 대신 **내가 일으킨 통신을 `tcpdump`로 직접 캡처**하는 실습은 [`../Net_Intro`](../Net_Intro) 에 있다.

@@ -1,0 +1,84 @@
+# Net_Intro 실습 - 같은 네트워크의 컨테이너들 사이에서 통신을 만들고, tcpdump 로 캡처한다
+#   .\run.cmd 01_network_tour.py            Python 파일 실행 (서버들이 자동으로 함께 시작된다)
+#   .\run.cmd capture.py http               통신을 캡처 -> captures\live_http.pcap (Wireshark 로 열기)
+#   docker compose logs tcp-server          서버 쪽에서 무엇을 받았는지 보기
+#   docker compose down                     정리
+
+x-lab: &lab
+  image: ghcr.io/inetguru/aiot-lab:v2
+  working_dir: /work
+  volumes:
+    - ./python:/work
+
+services:
+  # ---- 클라이언트 (우리가 실행하는 쪽). 이 컨테이너의 eth0 에서 tcpdump 로 캡처한다
+  py:
+    <<: *lab
+    entrypoint: ["python3", "-u"]
+    volumes:
+      - ./python:/work
+      - ./captures:/captures
+    cap_add: [NET_RAW]
+    depends_on:
+      web: {condition: service_healthy}
+      tls: {condition: service_healthy}
+      tcp-server: {condition: service_healthy}
+      udp-server: {condition: service_healthy}
+      mcast-rx1: {condition: service_healthy}
+      mcast-rx2: {condition: service_healthy}
+
+  # ---- 서버들 (자동 시작). 준비 여부는 /proc 으로 확인하므로 로그에 점검 흔적이 남지 않는다
+  web:      # HTTP (평문): 기상청 API 를 흉내 낸 서버, 포트 4000
+    image: ghcr.io/inetguru/aiot-lab:v2
+    working_dir: /mock
+    volumes:
+      - ../Web_Intro/mock-kma:/mock
+    command: node server.js
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; d = open('/proc/net/tcp').read() + open('/proc/net/tcp6').read(); sys.exit(0 if ':0FA0 ' in d else 1)"]
+      interval: 1s
+      retries: 30
+
+  tls:      # HTTPS: 자체 서명 인증서, 포트 8443
+    <<: *lab
+    command: ["python3", "-u", "tls_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':20FB 00000000:0000 0A' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  tcp-server:   # TCP 서버, 포트 9000
+    <<: *lab
+    command: ["python3", "-u", "03_tcp_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':2328 00000000:0000 0A' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  udp-server:   # UDP 서버, 포트 9001
+    <<: *lab
+    command: ["python3", "-u", "04_udp_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':2329 ' in open('/proc/net/udp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  mcast-rx1:    # Multicast 수신자 1 (그룹 224.1.1.1:5007)
+    <<: *lab
+    environment:
+      NAME: rx1
+    command: ["python3", "-u", "05_mcast_receiver.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':138F ' in open('/proc/net/udp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  mcast-rx2:    # Multicast 수신자 2
+    <<: *lab
+    environment:
+      NAME: rx2
+    command: ["python3", "-u", "05_mcast_receiver.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':138F ' in open('/proc/net/udp').read() else 1)"]
+      interval: 1s
+      retries: 30
