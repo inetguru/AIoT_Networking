@@ -1,0 +1,74 @@
+# Physical_Intro 실습 - Physical AI와 네트워킹: Modbus, CAN, 게이트웨이, 엣지 AI, (선택) ROS2/DDS
+#   .\run.cmd 01_modbus_read.py              Python 파일 실행 (PLC 등 서버들이 자동으로 함께 시작된다)
+#   .\run.cmd capture.py modbus              Modbus 통신을 캡처 -> captures\live_modbus.pcap (Wireshark 로 열기)
+#   docker compose logs plc                  PLC 쪽 로그 보기
+#   docker compose --profile ros up          (선택) ROS 2 talker/listener  (ros 이미지 약 1.3GB)
+#   docker compose down                      정리
+
+x-lab: &lab
+  image: ghcr.io/inetguru/aiot-lab:v2
+  working_dir: /work
+  volumes:
+    - ./python:/work
+
+services:
+  # ---- 클라이언트 (우리가 실행하는 쪽). 이 컨테이너의 eth0 에서 tcpdump 로 캡처한다
+  py:
+    <<: *lab
+    entrypoint: ["python3", "-u"]
+    environment:
+      PLC_HOST: plc
+      PLC_PORT: "5020"
+      MQTT_HOST: mosquitto
+      CLOUD_URL: http://cloud:8400
+      CLOUD_DELAY_MS: ${CLOUD_DELAY_MS:-400}
+    volumes:
+      - ./python:/work
+      - ./captures:/captures
+    cap_add: [NET_RAW]
+    depends_on:
+      plc: {condition: service_healthy}
+      cloud: {condition: service_healthy}
+      mosquitto: {condition: service_healthy}
+
+  # ---- 가상 PLC: Modbus TCP 서버 (공장 온도 센서 + 히터/긴급 냉각)
+  plc:
+    <<: *lab
+    command: ["python3", "-u", "plc_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':139C ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 60
+
+  # ---- 가상 클라우드 AI: 판단은 하지만 "멀리 있어서" 응답이 늦다 (지연은 시뮬레이션)
+  cloud:
+    <<: *lab
+    command: ["python3", "-u", "cloud_server.py"]
+    environment:
+      CLOUD_DELAY_MS: ${CLOUD_DELAY_MS:-400}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':20D0 ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 60
+
+  # ---- 게이트웨이 실습용 MQTT 브로커 (공식 이미지)
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+      interval: 1s
+      retries: 30
+
+  # ---- (선택) ROS 2 / DDS : `docker compose --profile ros up` 으로만 실행된다
+  ros-talker:
+    profiles: ["ros"]
+    image: ros:jazzy-ros-base
+    command: ["bash", "-c", "source /opt/ros/jazzy/setup.bash && python3 -u /work/ros_talker.py"]
+    volumes: ["./ros:/work:ro"]
+  ros-listener:
+    profiles: ["ros"]
+    image: ros:jazzy-ros-base
+    command: ["bash", "-c", "source /opt/ros/jazzy/setup.bash && python3 -u /work/ros_listener.py"]
+    volumes: ["./ros:/work:ro"]
