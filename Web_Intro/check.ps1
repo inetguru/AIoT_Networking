@@ -1,5 +1,5 @@
 ﻿# Web_Intro 사전 점검: WSL, Docker, 포트, 실습 이미지
-$image = "ghcr.io/inetguru/aiot-lab:node24"
+$image = "ghcr.io/inetguru/aiot-lab:v2"
 $ok = $true
 
 function Report($pass, $msg, $hint) {

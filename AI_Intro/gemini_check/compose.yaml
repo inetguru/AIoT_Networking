@@ -1,7 +1,7 @@
 # Gemini 접근 점검 - 실행:  .\run.cmd   (또는 docker compose run --rm py check_gemini.py)
 services:
   py:
-    image: ghcr.io/inetguru/aiot-lab:node24
+    image: ghcr.io/inetguru/aiot-lab:v2
     working_dir: /work
     volumes:
       - .:/work

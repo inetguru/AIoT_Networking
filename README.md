@@ -26,7 +26,7 @@ AI Agent와 AIoT 시대의 **네트워킹 구조와 기술 변화의 방향**을
 ## 실습 이미지
 
 ```
-ghcr.io/inetguru/aiot-lab:node24
+ghcr.io/inetguru/aiot-lab:v2
 ```
 
 `docker/Dockerfile`이 바뀌면 GitHub Actions가 amd64/arm64용으로 자동 빌드하여 GHCR에 올린다.

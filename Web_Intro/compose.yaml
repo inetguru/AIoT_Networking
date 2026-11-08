@@ -6,7 +6,7 @@
 # 종료: Ctrl+C  /  정리: docker compose down
 
 x-lab: &lab
-  image: ghcr.io/inetguru/aiot-lab:node24
+  image: ghcr.io/inetguru/aiot-lab:v2
   working_dir: /lab
   volumes:
     - ./lab:/lab
@@ -39,7 +39,7 @@ services:
 
   # 기상청 초단기실황 API를 흉내 내는 모의 서버 (CORS 헤더를 일부러 보내지 않는다)
   mock-kma:
-    image: ghcr.io/inetguru/aiot-lab:node24
+    image: ghcr.io/inetguru/aiot-lab:v2
     working_dir: /mock
     volumes:
       - ./mock-kma:/mock

@@ -29,9 +29,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: docker
+          context: docker/base
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.IMAGE }}:node24
+            ${{ env.IMAGE }}:v2
             ${{ env.IMAGE }}:latest
