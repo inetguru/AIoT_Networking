@@ -4,7 +4,7 @@
 FROM node:24-slim
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl ca-certificates python3 \
+ && apt-get install -y --no-install-recommends curl ca-certificates python3 python3-requests \
  && rm -rf /var/lib/apt/lists/* \
  && npm install -g express@4.21.2 \
  && npm cache clean --force

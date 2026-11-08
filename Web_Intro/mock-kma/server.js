@@ -5,6 +5,7 @@ const http = require('http');
 
 const PORT = 4000;
 const PATH = '/1360000/VilageFcstInfoService/getUltraSrtNcst';
+const PATH2 = '/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';   // 공공데이터포털 현행 경로 (Postman Collection이 사용)
 
 function makeItems(q) {
   const baseDate = q.get('base_date') || '20260101';
@@ -13,7 +14,8 @@ function makeItems(q) {
   const ny = parseInt(q.get('ny') || '76', 10);
   const hour = parseInt(baseTime.slice(0, 2), 10);
   // 하루 주기로 오르내리는 그럴듯한 기온 (오후 3시 최고)
-  const temp = (14 + 8 * Math.sin(((hour - 9) / 24) * 2 * Math.PI)).toFixed(1);
+  // 격자(nx, ny)에 따라 조금씩 다르게 (지역별 호출 결과가 구분되도록)
+  const temp = (14 + 8 * Math.sin(((hour - 9) / 24) * 2 * Math.PI) + ((nx + ny) % 10 - 5) / 2).toFixed(1);
   const values = { PTY: '0', REH: '55', RN1: '0', T1H: temp, UUU: '1.2', VEC: '240', VVV: '-0.8', WSD: '2.4' };
   return Object.entries(values).map(([category, obsrValue]) => ({
     baseDate, baseTime, category, nx, ny, obsrValue,
@@ -25,7 +27,7 @@ const server = http.createServer((req, res) => {
   // 서버는 요청을 정상 수신한다. 막는 것은 '브라우저'라는 점을 로그로 확인할 수 있다.
   console.log(`${new Date().toISOString()} ${req.method} ${u.pathname} Origin=${req.headers.origin || '-'}`);
 
-  if (u.pathname === PATH) {
+  if (u.pathname === PATH || u.pathname === PATH2) {
     const items = makeItems(u.searchParams);
     const body = {
       response: {
