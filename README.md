@@ -13,6 +13,7 @@ AI Agent와 AIoT 시대의 **네트워킹 구조와 기술 변화의 방향**을
 | [`HTTP_Intro/`](HTTP_Intro) | HTTP의 이해 (패킷 캡처 실습) | **사용 가능** |
 | [`Net_Intro/`](Net_Intro) | 네트워크 프로그래밍 (I): 직접 캡처(tcpdump), 소켓, TCP/UDP, Multicast | **사용 가능** |
 | [`Net2_Intro/`](Net2_Intro) | 네트워크 프로그래밍 (II): Blocking vs Non-Blocking, Stateless/Stateful, SSE·WebSocket, MQTT, OPC UA | **사용 가능** |
+| [`AI_Intro/`](AI_Intro) | 인공지능과 네트워크 프로그래밍: LLM API, Tool Calling, Agent, MCP, A2A (키 없이도 동작) | **사용 가능** |
 | [`docs/industrial-iot/`](docs/industrial-iot/index.html) | **보조 문서**: 제조 현장의 디바이스와 네트워킹, OPC UA 배경 (HTML) | **사용 가능** |
 | [`Web_Intro/`](Web_Intro) | HTTP와 Web Programming (Node.js/Express, AJAX, CORS) | **사용 가능** |
 | [`docker/`](docker) | 모든 실습이 공유하는 이미지 (Node.js + Express + Python3) | 사용 가능 |

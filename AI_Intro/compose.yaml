@@ -1,0 +1,56 @@
+# AI_Intro 실습 - 인공지능과 네트워크 프로그래밍: LLM API, Tool Calling, Agent, MCP, A2A
+#   .\run.cmd 01_hello_llm.py          Python 파일 실행 (서버들이 자동으로 함께 시작된다)
+#   .env 에 GEMINI_API_KEY 가 있으면 진짜 Gemini, 없으면 모의 LLM 서버를 쓴다
+#   docker compose logs plant          설비(plant) API 에 어떤 요청이 왔는지 보기
+#   docker compose down                정리
+# (gemini_check/ 폴더는 Gemini 접근 점검 도구로, 이 compose 와는 별개다)
+
+x-lab: &lab
+  image: ghcr.io/inetguru/aiot-lab:v2
+  working_dir: /work
+  volumes:
+    - ./python:/work
+
+services:
+  py:
+    <<: *lab
+    entrypoint: ["python3", "-u"]
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_FALLBACK: ${LLM_FALLBACK:-}
+      PLANT_URL: http://plant:8200
+      MOCK_LLM_BASE: http://mock-llm:8000/v1beta
+    depends_on:
+      mock-llm: {condition: service_healthy}
+      plant: {condition: service_healthy}
+      a2a-agent: {condition: service_healthy}
+
+  mock-llm:        # 모의 LLM (Gemini generateContent 형식, 규칙 기반)  :8000
+    <<: *lab
+    command: ["python3", "-u", "mock_llm_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':1F40 ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  plant:           # 기존 시스템: 공장 설비 REST API  :8200
+    <<: *lab
+    command: ["python3", "-u", "plant_server.py"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':2008 ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
+
+  a2a-agent:       # 다른 에이전트가 말을 걸 수 있는 설비 에이전트  :8300
+    <<: *lab
+    environment:
+      PLANT_URL: http://plant:8200
+    command: ["python3", "-u", "a2a_agent.py"]
+    depends_on:
+      plant: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if ':206C ' in open('/proc/net/tcp').read() else 1)"]
+      interval: 1s
+      retries: 30
